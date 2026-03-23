@@ -40,7 +40,8 @@ manager.Close()
 
 Each request type has a dedicated validator that checks:
 - Non-nil request
-- Non-empty `language_id`, `file_uri`, `root_uri`
+- Non-empty `language_id` and `file_uri`
+- `root_uri` is required for definition requests (other requests may not enforce it)
 - Non-negative `line` and `character`
 - Language is configured in `config.yaml`
 

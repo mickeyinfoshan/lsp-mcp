@@ -30,7 +30,11 @@ err := server.Shutdown(ctx)         // Graceful shutdown
 | `lsp_completion` | `handleCompletion` | Get code completion suggestions |
 | `lsp_shutdown` | `handleShutdown` | Close an LSP session |
 
-All tools (except `lsp_shutdown`) accept: `language_id`, `root_uri`, `file_uri`, `line`, `character`, and an optional `symbol` parameter for fuzzy position correction.
+All tools accept `language_id` and `root_uri`.
+
+- `lsp_definition`, `lsp_references`, `lsp_hover`, and `lsp_completion` also accept `file_uri`, `line`, and `character`
+- `lsp_definition`, `lsp_references`, and `lsp_hover` accept an optional `symbol` parameter for fuzzy position correction
+- `lsp_completion` accepts optional `trigger_kind` and `trigger_character` parameters instead of `symbol`
 
 ## Handler Flow
 
