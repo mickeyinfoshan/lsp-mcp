@@ -23,6 +23,7 @@ defer client.Close()
 client.Initialize(ctx)                          // MCP handshake
 client.ListTools(ctx)                           // List available tools
 client.CallTool(ctx, "lsp_definition", args)    // Call any MCP tool
+client.TestListTools(ctx)                       // Test listing tools
 client.TestLSPDefinition(ctx, lang, root, file, line, char)
 client.TestLSPHover(ctx, lang, root, file, line, char)
 ```
