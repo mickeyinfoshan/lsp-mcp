@@ -1,5 +1,12 @@
 # lsp-mcp
 
+[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/mickeyinfoshan/lsp-mcp/workflows/CI/badge.svg)](https://github.com/mickeyinfoshan/lsp-mcp/actions)
+[![codecov](https://codecov.io/gh/mickeyinfoshan/lsp-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/mickeyinfoshan/lsp-mcp)
+[![GitHub Stars](https://img.shields.io/github/stars/mickeyinfoshan/lsp-mcp?style=social)](https://github.com/mickeyinfoshan/lsp-mcp/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/mickeyinfoshan/lsp-mcp)](https://github.com/mickeyinfoshan/lsp-mcp/issues)
+
 A bridge between the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) and the [Language Server Protocol (LSP)](https://microsoft.github.io/language-server-protocol/), giving AI coding assistants access to real code intelligence — go-to-definition, find references, hover docs, and completions — across multiple languages.
 
 ## Why?
