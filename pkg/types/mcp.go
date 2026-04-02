@@ -1,21 +1,21 @@
 // mcp.go
-// MCP 工具相关类型定义
+// Types for MCP tools
 // Types for MCP tool request/response
 package types
 
-// MCPToolRequest MCP工具请求
+// MCPToolRequest MCP tool request
 type MCPToolRequest struct {
 	Name      string                 `json:"name"`
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
-// MCPToolResponse MCP工具响应
+// MCPToolResponse MCP tool response
 type MCPToolResponse struct {
 	Content []MCPContent `json:"content"`
 	IsError bool         `json:"isError,omitempty"`
 }
 
-// MCPContent MCP内容
+// MCPContent MCP content
 type MCPContent struct {
 	Type string      `json:"type"`
 	Text string      `json:"text,omitempty"`

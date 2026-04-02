@@ -13,7 +13,7 @@ import (
 	protocol "go.lsp.dev/protocol"
 )
 
-// createTestConfig 创建测试配置
+// createTestConfig creates test config
 func createTestConfig(t *testing.T) *config.Config {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_config.yaml")
@@ -52,70 +52,70 @@ session:
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
-		t.Fatalf("创建测试配置文件失败: %v", err)
+		t.Fatalf("failed to create test config file: %v", err)
 	}
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("加载测试配置失败: %v", err)
+		t.Fatalf("failed to load test config: %v", err)
 	}
 
 	return cfg
 }
 
-// TestNewManager 测试创建新的会话管理器
+// TestNewManager tests creating a new session manager
 func TestNewManager(t *testing.T) {
 	cfg := createTestConfig(t)
 
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 
 	if manager == nil {
-		t.Fatal("会话管理器为空")
+		t.Fatal("session manager is nil")
 	}
 
-	// 验证管理器字段
+	// Validate manager fields
 	if manager.config != cfg {
-		t.Error("配置未正确设置")
+		t.Error("config not set correctly")
 	}
 
 	if manager.lspClient == nil {
-		t.Error("LSP客户端未初始化")
+		t.Error("LSP client not initialized")
 	}
 
 	if manager.ctx == nil {
-		t.Error("上下文未初始化")
+		t.Error("context not initialized")
 	}
 
 	if manager.cancel == nil {
-		t.Error("取消函数未初始化")
+		t.Error("cancel function not initialized")
 	}
 
 	if manager.metrics == nil {
-		t.Error("指标未初始化")
+		t.Error("metrics not initialized")
 	}
 
-	// 清理资源
+	// Cleanup
 	manager.Close()
 }
 
-// TestGetSupportedLanguages 测试获取支持的语言
+// TestGetSupportedLanguages tests getting supported languages
 func TestGetSupportedLanguages(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	languages := manager.GetSupportedLanguages()
 	if len(languages) == 0 {
-		t.Error("期望至少支持一种语言")
+		t.Error("expected at least one supported language")
 	}
 
-	// 验证配置的语言是否在支持列表中
+	// Verify configured languages are in the supported list
 	expectedLanguages := []string{"go", "typescript", "python"}
 	for _, expected := range expectedLanguages {
 		found := false
@@ -126,508 +126,508 @@ func TestGetSupportedLanguages(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("期望的语言 %s 不在支持列表中", expected)
+			t.Errorf("expected language %s not found in supported list", expected)
 		}
 	}
 }
 
-// TestFindDefinition_InvalidRequest 测试无效的查找定义请求
+// TestFindDefinition_InvalidRequest tests invalid find definition request
 func TestFindDefinition_InvalidRequest(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 测试空请求
+	// Test nil request
 	resp, err := manager.FindDefinition(ctx, nil)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 
-	// 测试缺少必需字段的请求
+	// Test request missing required fields
 	invalidReq := &types.FindDefinitionRequest{
-		LanguageID: "", // 空语言ID
+		LanguageID: "", // empty language ID
 		RootURI:    "file:///tmp/test",
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	resp, err = manager.FindDefinition(ctx, invalidReq)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 }
 
-// TestFindDefinition_ValidRequest 测试有效的查找定义请求
+// TestFindDefinition_ValidRequest tests valid find definition request
 func TestFindDefinition_ValidRequest(t *testing.T) {
-	// 跳过需要实际LSP服务器的测试
+	// skip tests that require a real LSP server
 	if testing.Short() {
-		t.Skip("跳过需要LSP服务器的测试")
+		t.Skip("skip tests that require a real LSP server")
 	}
 
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 创建有效请求
+	// Create a valid request
 	req := &types.FindDefinitionRequest{
 		LanguageID: "go",
 		RootURI:    "file:///tmp/test",
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
-	// 由于使用echo命令作为测试LSP服务器，这个测试可能会失败
-	// 但我们可以验证请求处理逻辑
+	// Since we use echo as the test LSP server, this test may fail
+	// but we can validate request handling logic
 	resp, err := manager.FindDefinition(ctx, req)
 	if err != nil {
-		t.Errorf("查找定义失败: %v", err)
+		t.Errorf("find definition failed: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 
-	// 验证指标已更新
+	// Verify metrics updated
 	metrics := manager.GetMetrics()
 	if metrics.TotalRequests == 0 {
-		t.Error("总请求数未更新")
+		t.Error("total requests not updated")
 	}
 }
 
-// TestGetMetrics 测试获取指标
+// TestGetMetrics tests getting metrics
 func TestGetMetrics(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	metrics := manager.GetMetrics()
 	if metrics == nil {
-		t.Fatal("指标为空")
+		t.Fatal("metrics is nil")
 	}
 
-	// 验证初始指标值
+	// Verify initial metrics
 	if metrics.TotalRequests != 0 {
-		t.Error("初始总请求数应为0")
+		t.Error("initial total requests should be 0")
 	}
 	if metrics.SuccessfulRequests != 0 {
-		t.Error("初始成功请求数应为0")
+		t.Error("initial successful requests should be 0")
 	}
 	if metrics.FailedRequests != 0 {
-		t.Error("初始失败请求数应为0")
+		t.Error("initial failed requests should be 0")
 	}
 	if metrics.SessionsCreated != 0 {
-		t.Error("初始创建会话数应为0")
+		t.Error("initial sessions created should be 0")
 	}
 	if metrics.SessionsClosed != 0 {
-		t.Error("初始关闭会话数应为0")
+		t.Error("initial sessions closed should be 0")
 	}
 }
 
-// TestShutdown 测试关闭管理器
+// TestShutdown tests closing the manager
 func TestShutdown(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 测试关闭
+	// Test shutdown
 	err = manager.Shutdown(ctx)
 	if err != nil {
-		t.Errorf("关闭管理器失败: %v", err)
+		t.Errorf("failed to close manager: %v", err)
 	}
 
-	// 验证上下文已取消
+	// Verify context canceled
 	select {
 	case <-manager.ctx.Done():
-		// 预期行为
+		// Expected behavior
 	default:
-		t.Error("上下文未被取消")
+		t.Error("context was not canceled")
 	}
 }
 
-// TestClose 测试关闭管理器
+// TestClose tests closing the manager
 func TestClose(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 
-	// 测试关闭
+	// Test close
 	err = manager.Close()
 	if err != nil {
-		t.Errorf("关闭管理器失败: %v", err)
+		t.Errorf("failed to close manager: %v", err)
 	}
 
-	// 验证上下文已取消
+	// Verify context canceled
 	select {
 	case <-manager.ctx.Done():
-		// 预期行为
+		// Expected behavior
 	default:
-		t.Error("上下文未被取消")
+		t.Error("context was not canceled")
 	}
 }
 
-// TestSessionMetrics_IncrementMethods 测试指标增量方法
+// TestSessionMetrics_IncrementMethods tests metric increment methods
 func TestSessionMetrics_IncrementMethods(t *testing.T) {
 	metrics := &SessionMetrics{}
 
-	// 测试增加总请求数
+	// Test increment total requests
 	metrics.incrementTotalRequests()
 	if metrics.TotalRequests != 1 {
-		t.Errorf("期望总请求数为1，实际为%d", metrics.TotalRequests)
+		t.Errorf("expected total requests to be 1, got %d", metrics.TotalRequests)
 	}
 
-	// 测试增加成功请求数
+	// Test increment successful requests
 	metrics.incrementSuccessfulRequests()
 	if metrics.SuccessfulRequests != 1 {
-		t.Errorf("期望成功请求数为1，实际为%d", metrics.SuccessfulRequests)
+		t.Errorf("expected successful requests to be 1, got %d", metrics.SuccessfulRequests)
 	}
 
-	// 测试增加失败请求数
+	// Test increment failed requests
 	metrics.incrementFailedRequests()
 	if metrics.FailedRequests != 1 {
-		t.Errorf("期望失败请求数为1，实际为%d", metrics.FailedRequests)
+		t.Errorf("expected failed requests to be 1, got %d", metrics.FailedRequests)
 	}
 
-	// 测试增加创建会话数
+	// Test increment sessions created
 	metrics.incrementSessionsCreated()
 	if metrics.SessionsCreated != 1 {
-		t.Errorf("期望创建会话数为1，实际为%d", metrics.SessionsCreated)
+		t.Errorf("expected sessions created to be 1, got %d", metrics.SessionsCreated)
 	}
 
-	// 测试增加关闭会话数
+	// Test increment sessions closed
 	metrics.incrementSessionsClosed()
 	if metrics.SessionsClosed != 1 {
-		t.Errorf("期望关闭会话数为1，实际为%d", metrics.SessionsClosed)
+		t.Errorf("expected sessions closed to be 1, got %d", metrics.SessionsClosed)
 	}
 }
 
-// TestSessionMetrics_UpdateMethods 测试指标更新方法
+// TestSessionMetrics_UpdateMethods tests metric update methods
 func TestSessionMetrics_UpdateMethods(t *testing.T) {
 	metrics := &SessionMetrics{}
 
-	// 测试更新最后请求时间
+	// Test update last request time
 	testTime := time.Now()
 	metrics.updateLastRequestTime(testTime)
 	if !metrics.LastRequestTime.Equal(testTime) {
-		t.Error("最后请求时间未正确更新")
+		t.Error("last request time not updated correctly")
 	}
 
-	// 测试更新平均响应时间
+	// Test update average response time
 	responseTime := 100 * time.Millisecond
 	metrics.updateAverageResponseTime(responseTime)
 	expectedMs := float64(responseTime.Nanoseconds()) / 1e6
 	if metrics.AverageResponseTime != expectedMs {
-		t.Errorf("期望平均响应时间为%.2f，实际为%.2f", expectedMs, metrics.AverageResponseTime)
+		t.Errorf("expected average response time %.2f, got %.2f", expectedMs, metrics.AverageResponseTime)
 	}
 }
 
-// TestValidateFindDefinitionRequest 测试验证查找定义请求
+// TestValidateFindDefinitionRequest tests validating find definition request
 func TestValidateFindDefinitionRequest(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
-	// 测试有效请求
+	// Test valid request
 	validReq := &types.FindDefinitionRequest{
 		LanguageID: "go",
 		RootURI:    "file:///tmp/test",
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	err = manager.validateFindDefinitionRequest(validReq)
 	if err != nil {
-		t.Errorf("有效请求验证失败: %v", err)
+		t.Errorf("valid request validation failed: %v", err)
 	}
 
-	// 测试空语言ID
+	// Test empty language ID
 	invalidReq1 := &types.FindDefinitionRequest{
 		LanguageID: "",
 		RootURI:    "file:///tmp/test",
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	err = manager.validateFindDefinitionRequest(invalidReq1)
 	if err == nil {
-		t.Error("期望空语言ID验证失败")
+		t.Error("expected empty language ID validation to fail")
 	}
 
-	// 测试空根URI
+	// Test empty root URI
 	invalidReq2 := &types.FindDefinitionRequest{
 		LanguageID: "go",
 		RootURI:    "",
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	err = manager.validateFindDefinitionRequest(invalidReq2)
 	if err == nil {
-		t.Error("期望空根URI验证失败")
+		t.Error("expected empty root URI validation to fail")
 	}
 
-	// 测试空文件URI
+	// Test empty file URI
 	invalidReq3 := &types.FindDefinitionRequest{
 		LanguageID: "go",
 		RootURI:    "file:///tmp/test",
 		FileURI:    "",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	err = manager.validateFindDefinitionRequest(invalidReq3)
 	if err == nil {
-		t.Error("期望空文件URI验证失败")
+		t.Error("expected empty file URI validation to fail")
 	}
 
-	// 测试不支持的语言
+	// Test unsupported language
 	invalidReq6 := &types.FindDefinitionRequest{
 		LanguageID: "unsupported",
 		RootURI:    "file:///tmp/test",
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	err = manager.validateFindDefinitionRequest(invalidReq6)
 	if err == nil {
-		t.Error("期望不支持的语言验证失败")
+		t.Error("expected unsupported language validation to fail")
 	}
 }
 
-// TestFindReferences_InvalidRequest 测试无效的查找引用请求
+// TestFindReferences_InvalidRequest tests invalid find references request
 func TestFindReferences_InvalidRequest(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 测试空请求
+	// Test nil request
 	resp, err := manager.FindReferences(ctx, nil)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 
-	// 测试缺少必需字段的请求
+	// Test request missing required fields
 	invalidReq := &types.FindReferencesRequest{
-		LanguageID: "", // 空语言ID
+		LanguageID: "", // empty language ID
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	resp, err = manager.FindReferences(ctx, invalidReq)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 }
 
-// TestGetHover_InvalidRequest 测试无效的悬停请求
+// TestGetHover_InvalidRequest tests invalid hover request
 func TestGetHover_InvalidRequest(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 测试空请求
+	// Test nil request
 	resp, err := manager.GetHover(ctx, nil)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 
-	// 测试缺少必需字段的请求
+	// Test request missing required fields
 	invalidReq := &types.HoverRequest{
-		LanguageID: "", // 空语言ID
+		LanguageID: "", // empty language ID
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	resp, err = manager.GetHover(ctx, invalidReq)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 }
 
-// TestGetCompletion_InvalidRequest 测试无效的代码补全请求
+// TestGetCompletion_InvalidRequest tests invalid completion request
 func TestGetCompletion_InvalidRequest(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 测试空请求
+	// Test nil request
 	resp, err := manager.GetCompletion(ctx, nil)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 
-	// 测试缺少必需字段的请求
+	// Test request missing required fields
 	invalidReq := &types.CompletionRequest{
-		LanguageID: "", // 空语言ID
+		LanguageID: "", // empty language ID
 		FileURI:    "file:///tmp/test/main.go",
 		Position: protocol.Position{
-			Line:      0, // 原为-1，uint32不支持，0用于测试非法输入
+			Line:      0, // was -1; uint32 does not support it, using 0 to simulate invalid input
 			Character: 5,
 		},
 	}
 
 	resp, err = manager.GetCompletion(ctx, invalidReq)
 	if err != nil {
-		t.Errorf("期望返回错误响应而不是错误: %v", err)
+		t.Errorf("expected error response, not error: %v", err)
 	}
 	if resp == nil {
-		t.Fatal("响应为空")
+		t.Fatal("response is nil")
 	}
 	if resp.Error == "" {
-		t.Error("期望响应包含错误信息")
+		t.Error("expected response to contain error")
 	}
 }
 
-// TestGetSessionInfo 测试获取会话信息
+// TestGetSessionInfo tests getting session info
 func TestGetSessionInfo(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
 	info := manager.GetSessionInfo()
 	if info == nil {
-		t.Fatal("会话信息为空")
+		t.Fatal("session info is nil")
 	}
 
-	// 验证包含指标信息
+	// Verify metrics included
 	if _, exists := info["metrics"]; !exists {
-		t.Error("会话信息中缺少指标信息")
+		t.Error("session info missing metrics")
 	}
 }
 
-// TestGetLSPServerConfig 测试获取LSP服务器配置
+// TestGetLSPServerConfig tests getting LSP server config
 func TestGetLSPServerConfig(t *testing.T) {
 	cfg := createTestConfig(t)
 	manager, err := NewManager(cfg)
 	if err != nil {
-		t.Fatalf("创建会话管理器失败: %v", err)
+		t.Fatalf("failed to create session manager: %v", err)
 	}
 	defer manager.Close()
 
-	// 测试获取存在的语言配置
+	// Test getting existing language config
 	config, exists := manager.GetLSPServerConfig("go")
 	if !exists {
-		t.Error("期望找到go语言配置")
+		t.Error("expected to find Go language config")
 	}
 	if config == nil {
-		t.Error("go语言配置为空")
+		t.Error("Go language config is nil")
 	}
 
-	// 测试获取不存在的语言配置
+	// Test getting nonexistent language config
 	_, exists = manager.GetLSPServerConfig("nonexistent")
 	if exists {
-		t.Error("期望不存在的语言配置返回false")
+		t.Error("expected nonexistent language config to return false")
 	}
 }
 
-// TestSessionMetrics_Reset 测试重置指标
+// TestSessionMetrics_Reset tests resetting metrics
 func TestSessionMetrics_Reset(t *testing.T) {
 	metrics := &SessionMetrics{
 		TotalRequests:       10,
@@ -639,34 +639,34 @@ func TestSessionMetrics_Reset(t *testing.T) {
 		LastRequestTime:     time.Now(),
 	}
 
-	// 重置指标
+	// Reset metrics
 	metrics.Reset()
 
-	// 验证所有指标都被重置为零值
+	// Verify all metrics reset to zero values
 	if metrics.TotalRequests != 0 {
-		t.Errorf("期望总请求数为0，实际为%d", metrics.TotalRequests)
+		t.Errorf("expected total requests 0, got %d", metrics.TotalRequests)
 	}
 	if metrics.SuccessfulRequests != 0 {
-		t.Errorf("期望成功请求数为0，实际为%d", metrics.SuccessfulRequests)
+		t.Errorf("expected successful requests 0, got %d", metrics.SuccessfulRequests)
 	}
 	if metrics.FailedRequests != 0 {
-		t.Errorf("期望失败请求数为0，实际为%d", metrics.FailedRequests)
+		t.Errorf("expected failed requests 0, got %d", metrics.FailedRequests)
 	}
 	if metrics.AverageResponseTime != 0 {
-		t.Errorf("期望平均响应时间为0，实际为%.2f", metrics.AverageResponseTime)
+		t.Errorf("expected average response time 0, got %.2f", metrics.AverageResponseTime)
 	}
 	if metrics.SessionsCreated != 0 {
-		t.Errorf("期望创建会话数为0，实际为%d", metrics.SessionsCreated)
+		t.Errorf("expected sessions created 0, got %d", metrics.SessionsCreated)
 	}
 	if metrics.SessionsClosed != 0 {
-		t.Errorf("期望关闭会话数为0，实际为%d", metrics.SessionsClosed)
+		t.Errorf("expected sessions closed 0, got %d", metrics.SessionsClosed)
 	}
 	if !metrics.LastRequestTime.IsZero() {
-		t.Error("期望最后请求时间为零值")
+		t.Error("expected last request time to be zero")
 	}
 }
 
-// TestSessionMetrics_GetMetrics 测试获取指标信息
+// TestSessionMetrics_GetMetrics tests getting metrics info
 func TestSessionMetrics_GetMetrics(t *testing.T) {
 	metrics := &SessionMetrics{
 		TotalRequests:       10,
@@ -680,10 +680,10 @@ func TestSessionMetrics_GetMetrics(t *testing.T) {
 
 	metricsMap := metrics.getMetrics()
 	if metricsMap == nil {
-		t.Fatal("指标映射为空")
+		t.Fatal("metrics map is nil")
 	}
 
-	// 验证所有字段都存在
+	// Verify all fields exist
 	expectedFields := []string{
 		"total_requests",
 		"successful_requests",
@@ -697,29 +697,29 @@ func TestSessionMetrics_GetMetrics(t *testing.T) {
 
 	for _, field := range expectedFields {
 		if _, exists := metricsMap[field]; !exists {
-			t.Errorf("指标映射中缺少字段: %s", field)
+			t.Errorf("metrics map missing field: %s", field)
 		}
 	}
 
-	// 验证成功率计算
+	// Verify success rate calculation
 	successRate := metricsMap["success_rate"].(float64)
 	expectedRate := float64(8) / float64(10) * 100.0
 	if successRate != expectedRate {
-		t.Errorf("期望成功率为%.2f，实际为%.2f", expectedRate, successRate)
+		t.Errorf("expected success rate %.2f, got %.2f", expectedRate, successRate)
 	}
 }
 
-// TestSessionMetrics_ConcurrentAccess 测试并发访问指标
+// TestSessionMetrics_ConcurrentAccess tests concurrent metrics access
 func TestSessionMetrics_ConcurrentAccess(t *testing.T) {
 	metrics := &SessionMetrics{}
 	const numGoroutines = 100
 	const numOperations = 10
 
-	// 使用WaitGroup等待所有goroutine完成
+	// Use WaitGroup to wait for all goroutines
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
-	// 启动多个goroutine并发访问指标
+	// Start multiple goroutines to access metrics concurrently
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			defer wg.Done()
@@ -732,15 +732,15 @@ func TestSessionMetrics_ConcurrentAccess(t *testing.T) {
 		}()
 	}
 
-	// 等待所有goroutine完成
+	// Wait for all goroutines to complete
 	wg.Wait()
 
-	// 验证最终结果
+	// Verify final result
 	expectedTotal := int64(numGoroutines * numOperations)
 	if metrics.TotalRequests != expectedTotal {
-		t.Errorf("期望总请求数为%d，实际为%d", expectedTotal, metrics.TotalRequests)
+		t.Errorf("expected total requests %d, got %d", expectedTotal, metrics.TotalRequests)
 	}
 	if metrics.SuccessfulRequests != expectedTotal {
-		t.Errorf("期望成功请求数为%d，实际为%d", expectedTotal, metrics.SuccessfulRequests)
+		t.Errorf("expected successful requests %d, got %d", expectedTotal, metrics.SuccessfulRequests)
 	}
 }

@@ -1,4 +1,3 @@
-// LSP 请求与响应相关类型定义
 // Types for LSP requests and responses
 package types
 
@@ -6,7 +5,7 @@ import (
 	protocol "go.lsp.dev/protocol"
 )
 
-// LSPInitializeParams LSP初始化参数
+// LSPInitializeParams LSP initialization parameters
 type LSPInitializeParams struct {
 	ProcessID             *int                  `json:"processId,omitempty"`
 	ClientInfo            *LSPClientInfo        `json:"clientInfo,omitempty"`
@@ -19,19 +18,19 @@ type LSPInitializeParams struct {
 	WorkspaceFolders      []LSPWorkspaceFolder  `json:"workspaceFolders,omitempty"`
 }
 
-// LSPClientInfo 客户端信息
+// LSPClientInfo client info
 type LSPClientInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version,omitempty"`
 }
 
-// LSPWorkspaceFolder 工作区文件夹
+// LSPWorkspaceFolder workspace folder
 type LSPWorkspaceFolder struct {
 	URI  string `json:"uri"`
 	Name string `json:"name"`
 }
 
-// FindDefinitionRequest 查找定义请求
+// FindDefinitionRequest find definition request
 type FindDefinitionRequest struct {
 	LanguageID string            `json:"language_id"`
 	RootURI    string            `json:"root_uri"`
@@ -39,7 +38,7 @@ type FindDefinitionRequest struct {
 	Position   protocol.Position `json:"position"`
 }
 
-// FindDefinitionResponse 查找定义响应
+// FindDefinitionResponse find definition response
 type FindDefinitionResponse struct {
 	AgentResults  []AgentDefinitionResult `json:"agent_results,omitempty"`
 	Locations     []protocol.Location     `json:"locations,omitempty"`
@@ -48,7 +47,7 @@ type FindDefinitionResponse struct {
 	Message       string                  `json:"message,omitempty"`
 }
 
-// AgentDefinitionResult agent友好结构化跳转结果
+// AgentDefinitionResult agent-friendly structured definition result
 type AgentDefinitionResult struct {
 	Type      string             `json:"type"`
 	File      string             `json:"file"`
@@ -59,7 +58,7 @@ type AgentDefinitionResult struct {
 	Location  *protocol.Location `json:"location,omitempty"`
 }
 
-// FindReferencesRequest 查找引用请求
+// FindReferencesRequest find references request
 type FindReferencesRequest struct {
 	LanguageID         string            `json:"language_id"`
 	RootURI            string            `json:"root_uri"`
@@ -68,7 +67,7 @@ type FindReferencesRequest struct {
 	IncludeDeclaration bool              `json:"include_declaration"`
 }
 
-// FindReferencesResponse 查找引用响应
+// FindReferencesResponse find references response
 type FindReferencesResponse struct {
 	AgentResults []AgentReferenceResult `json:"agent_results,omitempty"`
 	Locations    []protocol.Location    `json:"locations,omitempty"`
@@ -76,7 +75,7 @@ type FindReferencesResponse struct {
 	Message      string                 `json:"message,omitempty"`
 }
 
-// AgentReferenceResult agent友好结构化引用结果
+// AgentReferenceResult agent-friendly structured reference result
 type AgentReferenceResult struct {
 	Type      string             `json:"type"`
 	File      string             `json:"file"`
@@ -87,7 +86,7 @@ type AgentReferenceResult struct {
 	Location  *protocol.Location `json:"location,omitempty"`
 }
 
-// HoverRequest 悬停信息请求
+// HoverRequest hover request
 type HoverRequest struct {
 	LanguageID string            `json:"language_id"`
 	RootURI    string            `json:"root_uri"`
@@ -95,7 +94,7 @@ type HoverRequest struct {
 	Position   protocol.Position `json:"position"`
 }
 
-// HoverResponse 悬停信息响应
+// HoverResponse hover response
 type HoverResponse struct {
 	AgentResults []AgentHoverResult `json:"agent_results,omitempty"`
 	Contents     interface{}        `json:"contents,omitempty"`
@@ -104,7 +103,7 @@ type HoverResponse struct {
 	Message      string             `json:"message,omitempty"`
 }
 
-// AgentHoverResult agent友好结构化悬停结果
+// AgentHoverResult agent-friendly structured hover result
 type AgentHoverResult struct {
 	Summary         string             `json:"summary"`
 	Doc             string             `json:"doc,omitempty"`
@@ -119,7 +118,7 @@ type AgentHoverResult struct {
 	RawMarkdown     string             `json:"raw_markdown,omitempty"`
 }
 
-// CompletionRequest 代码补全请求
+// CompletionRequest completion request
 type CompletionRequest struct {
 	LanguageID       string            `json:"language_id"`
 	RootURI          string            `json:"root_uri"`
@@ -129,7 +128,7 @@ type CompletionRequest struct {
 	TriggerCharacter string            `json:"trigger_character,omitempty"`
 }
 
-// CompletionResponse 代码补全响应
+// CompletionResponse completion response
 type CompletionResponse struct {
 	AgentResults []AgentCompletionResult   `json:"agent_results,omitempty"`
 	Items        []protocol.CompletionItem `json:"items,omitempty"`
@@ -138,7 +137,7 @@ type CompletionResponse struct {
 	Message      string                    `json:"message,omitempty"`
 }
 
-// AgentCompletionResult agent友好结构化补全结果
+// AgentCompletionResult agent-friendly structured completion result
 type AgentCompletionResult struct {
 	Type           string                  `json:"type"`
 	File           string                  `json:"file"`
@@ -149,7 +148,7 @@ type AgentCompletionResult struct {
 	CompletionItem protocol.CompletionItem `json:"completion_item"`
 }
 
-// OpenFileRequest 打开文件请求
+// OpenFileRequest open file request
 type OpenFileRequest struct {
 	LanguageID string `json:"language_id"`
 	RootURI    string `json:"root_uri"`

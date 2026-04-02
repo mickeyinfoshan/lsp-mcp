@@ -1,5 +1,4 @@
 // handlers.go
-// MCP 工具请求的 LSP 适配与处理逻辑
 // Handles MCP tool requests and adapts them to LSP operations.
 package mcp
 
@@ -19,7 +18,6 @@ import (
 	protocol "go.lsp.dev/protocol"
 )
 
-// handleLSPInitialize 处理 LSP 初始化请求
 // handleLSPInitialize handles LSP initialize requests
 // 参数: ctx - 上下文，req - MCP 工具请求
 // 返回值: MCP 工具调用结果和错误信息
