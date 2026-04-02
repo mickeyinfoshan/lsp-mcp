@@ -19,11 +19,11 @@ import (
 )
 
 // handleLSPInitialize handles LSP initialize requests
-// 参数: ctx - 上下文，req - MCP 工具请求
-// 返回值: MCP 工具调用结果和错误信息
-// 用于初始化 LSP 会话，校验参数并调用 LSP 客户端
+// Parameters: ctx - context, req - MCP tool request
+// Returns: MCP tool call result and error information
+// Used to initialize LSP session, validate parameters and call LSP client
 func (s *Server) handleLSPInitialize(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// 从请求中提取参数
+	// Extract parameters from request
 	languageId, err := req.RequireString("language_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -34,37 +34,37 @@ func (s *Server) handleLSPInitialize(ctx context.Context, req mcp.CallToolReques
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	// 验证语言ID是否支持
+	// Verify if language ID is supported
 	if _, exists := s.config.GetLSPServerConfig(languageId); !exists {
-		return mcp.NewToolResultError(fmt.Sprintf("不支持的语言: %s", languageId)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("unsupported language: %s", languageId)), nil
 	}
 
-	// 直接调用LSP客户端的GetOrCreateSession方法来初始化会话
-	// 这样避免了通过虚拟文件触发初始化的复杂逻辑
+	// Directly call LSP client's GetOrCreateSession method to initialize session
+	// This avoids the complex logic of triggering initialization through virtual files
 	_, err = s.sessionManager.GetLSPClient().GetOrCreateSession(languageId, rootUri)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("LSP会话初始化失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("LSP session initialization failed: %v", err)), nil
 	}
 
-	// 构建成功响应
+	// Build success response
 	response := map[string]interface{}{
 		"success":     true,
 		"language_id": languageId,
 		"root_uri":    rootUri,
-		"message":     "LSP会话初始化成功",
+		"message":     "LSP session initialized successfully",
 	}
 
 	jsonData, err := json.Marshal(response)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("序列化响应失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to serialize response: %v", err)), nil
 	}
 
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-// handleLSPShutdown 处理LSP关闭请求
+// handleLSPShutdown handles LSP shutdown requests
 func (s *Server) handleLSPShutdown(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// 从请求中提取参数
+	// Extract parameters from request
 	languageId, err := req.RequireString("language_id")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -75,57 +75,57 @@ func (s *Server) handleLSPShutdown(ctx context.Context, req mcp.CallToolRequest)
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	// 构建响应
+	// Build response
 	response := map[string]interface{}{
 		"success":     true,
 		"language_id": languageId,
 		"root_uri":    rootUri,
-		"message":     "LSP会话关闭请求已接收",
+		"message":     "LSP session shutdown request received",
 	}
 
 	jsonData, err := json.Marshal(response)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("序列化响应失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to serialize response: %v", err)), nil
 	}
 
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-// handleInitialize 处理lsp.initialize工具调用
+// handleInitialize handles lsp.initialize tool calls
 func (s *Server) handleInitialize(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.handleLSPInitialize(ctx, req)
 }
 
-// handleShutdown 处理lsp.shutdown工具调用
+// handleShutdown handles lsp.shutdown tool calls
 func (s *Server) handleShutdown(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.handleLSPShutdown(ctx, req)
 }
 
-// 封装：根据 symbol 智能提取修正 character，并输出日志
+// Wrapper: intelligently extract and adjust character based on symbol, and output logs
 func adjustCharacterBySymbol(fileUri string, line, character int) (int, error) {
 	filePath := strings.TrimPrefix(fileUri, "file://")
 	lineContent, err := readFileLine(filePath, line)
 	if err != nil {
-		log.Printf("[symbol-extract] 读取文件失败: %s line=%d err=%v", fileUri, line, err)
+		log.Printf("[symbol-extract] Failed to read file: %s line=%d err=%v", fileUri, line, err)
 		return character, err
 	}
 	symbol, start := extractSymbolSmart(lineContent, character)
 	if start >= 0 && len(symbol) > 0 {
 		if start <= character && character < start+len(symbol) {
-			// character 已经在 symbol 内部，不修正
-			log.Printf("[symbol-extract] %s line=%d 原始char=%d 已在symbol '%s' 内, 保持原位", fileUri, line, character, symbol)
+			// character is already inside symbol, no adjustment
+			log.Printf("[symbol-extract] %s line=%d original char=%d already inside symbol '%s', keeping position", fileUri, line, character, symbol)
 			return character, nil
 		} else {
-			// character 不在 symbol 内部，修正到 symbol 起始
-			log.Printf("[symbol-extract] %s line=%d 原始char=%d 修正char=%d symbol='%s'", fileUri, line, character, start, symbol)
+			// character is not inside symbol, adjust to symbol start
+			log.Printf("[symbol-extract] %s line=%d original char=%d adjusted char=%d symbol='%s'", fileUri, line, character, start, symbol)
 			return start, nil
 		}
 	}
-	log.Printf("[symbol-extract] %s line=%d 原始char=%d 未提取到symbol，保持原位", fileUri, line, character)
+	log.Printf("[symbol-extract] %s line=%d original char=%d no symbol extracted, keeping position", fileUri, line, character)
 	return character, nil
 }
 
-// handleDefinition 处理lsp.definition工具调用
+// handleDefinition handles lsp.definition tool calls
 func (s *Server) handleDefinition(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	languageId, err := req.RequireString("language_id")
 	if err != nil {
@@ -139,7 +139,7 @@ func (s *Server) handleDefinition(ctx context.Context, req mcp.CallToolRequest) 
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	// 自动查找 rootUri，找不到时用 rootUriInput 作为 workspaceRoot 兜底
+	// Automatically find rootUri, use rootUriInput as workspaceRoot fallback if not found
 	rootUri := findProjectRoot(fileUri, languageId, strings.TrimPrefix(rootUriInput, "file://"))
 	line, err := req.RequireInt("line")
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *Server) handleDefinition(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	response, err := s.sessionManager.FindDefinition(ctx, findDefReq)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("查找定义失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to find definition: %v", err)), nil
 	}
 	text := response.Message
 	if len(response.AgentResults) > 0 {
@@ -185,12 +185,12 @@ func (s *Server) handleDefinition(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	jsonData, err := json.Marshal(toolResp)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("序列化响应失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to serialize response: %v", err)), nil
 	}
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-// handleReferences 处理lsp.references工具调用
+// handleReferences handles lsp.references tool calls
 func (s *Server) handleReferences(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	languageId, err := req.RequireString("language_id")
 	if err != nil {
@@ -233,7 +233,7 @@ func (s *Server) handleReferences(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	response, err := s.sessionManager.FindReferences(ctx, findRefReq)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("查找引用失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to find references: %v", err)), nil
 	}
 	text := response.Message
 	if len(response.AgentResults) > 0 {
@@ -251,12 +251,12 @@ func (s *Server) handleReferences(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	jsonData, err := json.Marshal(toolResp)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("序列化响应失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to serialize response: %v", err)), nil
 	}
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-// handleHover 处理lsp.hover工具调用
+// handleHover handles lsp.hover tool calls
 func (s *Server) handleHover(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	languageId, err := req.RequireString("language_id")
 	if err != nil {
@@ -297,7 +297,7 @@ func (s *Server) handleHover(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	response, err := s.sessionManager.GetHover(ctx, hoverReq)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("获取悬停信息失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to get hover information: %v", err)), nil
 	}
 	text := response.Message
 	if len(response.AgentResults) > 0 {
@@ -315,12 +315,12 @@ func (s *Server) handleHover(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 	jsonData, err := json.Marshal(toolResp)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("序列化响应失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to serialize response: %v", err)), nil
 	}
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-// handleCompletion 处理lsp.completion工具调用
+// handleCompletion handles lsp.completion tool calls
 func (s *Server) handleCompletion(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	languageId, err := req.RequireString("language_id")
 	if err != nil {
@@ -361,7 +361,7 @@ func (s *Server) handleCompletion(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	response, err := s.sessionManager.GetCompletion(ctx, completionReq)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("获取代码补全失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to get code completion: %v", err)), nil
 	}
 	text := response.Message
 	content := types.MCPContent{
@@ -374,12 +374,12 @@ func (s *Server) handleCompletion(ctx context.Context, req mcp.CallToolRequest) 
 	}
 	jsonData, err := json.Marshal(toolResp)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("序列化响应失败: %v", err)), nil
+		return mcp.NewToolResultError(fmt.Sprintf("failed to serialize response: %v", err)), nil
 	}
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-// getCompletionCount 获取补全项数量
+// getCompletionCount gets the number of completion items
 func getCompletionCount(completions interface{}) int {
 	switch v := completions.(type) {
 	case []interface{}:
@@ -394,7 +394,7 @@ func getCompletionCount(completions interface{}) int {
 	}
 }
 
-// formatLSPError 格式化LSP错误信息
+// formatLSPError formats LSP error information
 func formatLSPError(method string, err error) string {
 	if err == nil {
 		return ""
@@ -402,43 +402,43 @@ func formatLSPError(method string, err error) string {
 
 	errorMsg := err.Error()
 	if strings.Contains(errorMsg, "timeout") {
-		return fmt.Sprintf("LSP请求'%s'超时: %s", method, errorMsg)
+		return fmt.Sprintf("LSP request '%s' timed out: %s", method, errorMsg)
 	}
 
 	if strings.Contains(errorMsg, "connection") {
-		return fmt.Sprintf("LSP连接错误'%s': %s", method, errorMsg)
+		return fmt.Sprintf("LSP connection error '%s': %s", method, errorMsg)
 	}
 
-	return fmt.Sprintf("LSP请求'%s'失败: %s", method, errorMsg)
+	return fmt.Sprintf("LSP request '%s' failed: %s", method, errorMsg)
 }
 
-// validateURI 验证URI格式
+// validateURI validates URI format
 func validateURI(uri string) error {
 	if uri == "" {
-		return fmt.Errorf("URI不能为空")
+		return fmt.Errorf("URI cannot be empty")
 	}
 
 	if !strings.HasPrefix(uri, "file://") {
-		return fmt.Errorf("URI必须以'file://'开头")
+		return fmt.Errorf("URI must start with 'file://'")
 	}
 
 	return nil
 }
 
-// validatePosition 验证位置参数
+// validatePosition validates position parameters
 func validatePosition(line, character float64) error {
 	if line < 0 {
-		return fmt.Errorf("行号不能为负数")
+		return fmt.Errorf("line number cannot be negative")
 	}
 
 	if character < 0 {
-		return fmt.Errorf("字符位置不能为负数")
+		return fmt.Errorf("character position cannot be negative")
 	}
 
 	return nil
 }
 
-// convertToJSONString 将对象转换为JSON字符串
+// convertToJSONString converts an object to a JSON string
 func convertToJSONString(obj interface{}) string {
 	if obj == nil {
 		return "null"
@@ -446,13 +446,13 @@ func convertToJSONString(obj interface{}) string {
 
 	data, err := json.Marshal(obj)
 	if err != nil {
-		return fmt.Sprintf("JSON序列化错误: %v", err)
+		return fmt.Sprintf("JSON serialization error: %v", err)
 	}
 
 	return string(data)
 }
 
-// symbol 智能提取函数，参考方案文档
+// Symbol intelligent extraction function, see design document
 func extractSymbolSmart(line string, character int) (string, int) {
 	pos := character
 	for pos < len(line) && !isSymbolChar(line[pos]) {
@@ -479,7 +479,7 @@ func isSymbolChar(ch byte) bool {
 		ch == '_'
 }
 
-// 只读取指定行内容
+// Read only the specified line content
 func readFileLine(filePath string, lineNum int) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -501,13 +501,13 @@ func readFileLine(filePath string, lineNum int) (string, error) {
 	return "", fmt.Errorf("line %d out of range", lineNum)
 }
 
-// findSymbolPositionInFile 按方案在 fileUri 指定文件的 [line-10, line+10) 范围查找 symbol，未找到再扩大到 [line-50, line+50)，返回 protocol.Position，未找到则返回原始位置
+// findSymbolPositionInFile searches for symbol in the specified file's [line-10, line+10) range, expands to [line-50, line+50) if not found, returns protocol.Position, returns original position if not found
 func findSymbolPositionInFile(fileUri string, orig protocol.Position, symbol string) protocol.Position {
 	if symbol == "" {
 		return orig
 	}
 	filePath := strings.TrimPrefix(fileUri, "file://")
-	// 尝试两次：先±10行，未找到再±50行
+	// Try twice: first ±10 lines, if not found then ±50 lines
 	for _, delta := range []int{10, 50} {
 		startLine := int(orig.Line) - delta
 		if startLine < 0 {
@@ -523,15 +523,15 @@ func findSymbolPositionInFile(fileUri string, orig protocol.Position, symbol str
 		inBlockComment := false
 		for i, lineStr := range lines {
 			trimmed := strings.TrimSpace(lineStr)
-			// 跳过单行注释
+			// Skip single-line comments
 			if strings.HasPrefix(trimmed, "//") {
 				continue
 			}
-			// 处理多行注释
+			// Handle multi-line comments
 			if inBlockComment {
 				if idx := strings.Index(trimmed, "*/"); idx != -1 {
 					inBlockComment = false
-					// 继续处理注释后面的内容
+					// Continue processing content after comment
 					trimmed = trimmed[idx+2:]
 					lineStr = lineStr[idx+2:]
 				} else {
@@ -540,10 +540,10 @@ func findSymbolPositionInFile(fileUri string, orig protocol.Position, symbol str
 			}
 			if idx := strings.Index(trimmed, "/*"); idx != -1 {
 				inBlockComment = true
-				// 只处理注释前的内容
+				// Only process content before comment
 				lineStr = lineStr[:idx]
 			}
-			// 这里再查找 symbol
+			// Search for symbol here
 			idx := 0
 			for {
 				pos := strings.Index(lineStr[idx:], symbol)
@@ -558,7 +558,7 @@ func findSymbolPositionInFile(fileUri string, orig protocol.Position, symbol str
 			}
 		}
 		if len(positions) > 0 {
-			// 选取距离 orig 最近的
+			// Select the one closest to orig
 			minDist := -1
 			var nearest protocol.Position
 			for _, pos := range positions {
@@ -574,7 +574,7 @@ func findSymbolPositionInFile(fileUri string, orig protocol.Position, symbol str
 	return orig
 }
 
-// readLinesRange 读取文件 [startLine, endLine) 范围的所有行
+// readLinesRange reads all lines in the [startLine, endLine) range of a file
 func readLinesRange(filePath string, startLine, endLine int) ([]string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -606,11 +606,11 @@ func absInt(x int) int {
 	return x
 }
 
-// findProjectRoot 自动查找项目根目录，支持多语言和 node_modules 特殊处理
-// workspaceRoot 默认为 "/"，可通过配置文件扩展
+// findProjectRoot automatically finds project root directory, supports multiple languages and node_modules special handling
+// workspaceRoot defaults to "/", can be extended via configuration file
 func findProjectRoot(fileUri, languageId, workspaceRoot string) string {
 	filePath := strings.TrimPrefix(fileUri, "file://")
-	// node_modules 特殊处理
+	// node_modules special handling
 	if languageId == "typescript" || languageId == "javascript" {
 		if idx := strings.Index(filePath, "node_modules"); idx > 0 {
 			filePath = filePath[:idx]
@@ -621,7 +621,7 @@ func findProjectRoot(fileUri, languageId, workspaceRoot string) string {
 		"typescript": {"tsconfig.json"},
 		"javascript": {"tsconfig.json"},
 		"python":     {"pyproject.toml", "setup.py"},
-		// ... 其它语言可扩展
+		// ... other languages can be extended
 	}
 	dir := filepath.Dir(filePath)
 	for {

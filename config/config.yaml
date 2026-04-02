@@ -1,9 +1,9 @@
 # MCP-LSP Bridge Service Configuration
 
-# LSP服务器配置映射
-# 将语言ID映射到对应的LSP服务器配置
+# LSP server configuration mapping
+# Maps language IDs to corresponding LSP server configurations
 lsp_servers:
-  # Go语言服务器配置
+  # Go language server configuration
   go:
     command: "gopls"
     args: ["serve"]
@@ -14,7 +14,7 @@ lsp_servers:
       GO111MODULE: "on"
       GOPLSDEBUG: "all"
     
-  # TypeScript/JavaScript语言服务器配置
+  # TypeScript/JavaScript language server configuration
   typescript:
     command: "typescript-language-server"
     args: ["--stdio"]
@@ -27,38 +27,38 @@ lsp_servers:
     initialization_options: {}
     env: {}
     
-  # Python语言服务器配置
+  # Python language server configuration
   python:
     command: "pylsp"
     args: []
     initialization_options: {}
     env: {}
 
-# MCP服务器配置
+# MCP server configuration
 mcp_server:
-  # 服务器名称
+  # Server name
   name: "lsp-bridge"
-  # 服务器版本
+  # Server version
   version: "1.0.0"
-  # 服务器描述
+  # Server description
   description: "MCP-LSP Bridge Service for providing LSP capabilities through MCP protocol"
 
-# 日志配置
+# Logging configuration
 logging:
-  # 日志级别: debug, info, warn, error
+  # Log level: debug, info, warn, error
   level: "debug"
-  # 日志输出格式: json, text
+  # Log output format: json, text
   format: "json"
-  # 是否输出到文件
+  # Whether to output to file
   file_output: true
-  # 日志文件路径（当file_output为true时使用）
+  # Log file path (used when file_output is true)
   file_path: "./logs/mcp-lsp-bridge.log"
 
-# 会话管理配置
+# Session management configuration
 session:
-  # 会话超时时间（秒）
+  # Session timeout (seconds)
   timeout: 300
-  # 最大并发会话数
+  # Maximum concurrent sessions
   max_sessions: 100
-  # 会话清理间隔（秒）
+  # Session cleanup interval (seconds)
   cleanup_interval: 60
