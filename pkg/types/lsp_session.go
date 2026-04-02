@@ -1,6 +1,5 @@
-// LSP 会话相关类型定义
 // Types for LSP session management
-// Package types 定义项目中使用的核心数据类型
+// Package types defines core data types used by the project
 package types
 
 import (
@@ -9,20 +8,20 @@ import (
 	"time"
 )
 
-// SessionKey 会话键，用于唯一标识一个LSP会话
+// SessionKey uniquely identifies an LSP session
 type SessionKey struct {
-	// LanguageID 编程语言标识符
+	// LanguageID programming language identifier
 	LanguageID string `json:"language_id"`
-	// RootURI 工作区根目录URI
+	// RootURI workspace root URI
 	RootURI string `json:"root_uri"`
 }
 
-// String 返回会话键的字符串表示
+// String returns the string representation of a session key
 func (sk SessionKey) String() string {
 	return sk.LanguageID + ":" + sk.RootURI
 }
 
-// ParseSessionKey 从字符串解析会话键
+// ParseSessionKey parses a session key from string
 func ParseSessionKey(s string) (SessionKey, error) {
 	parts := strings.SplitN(s, ":", 2)
 	if len(parts) != 2 {
@@ -34,32 +33,32 @@ func ParseSessionKey(s string) (SessionKey, error) {
 	}, nil
 }
 
-// LSPSession LSP会话信息
+// LSPSession LSP session info
 type LSPSession struct {
-	// Key 会话键
+	// Key session key
 	Key SessionKey `json:"key"`
-	// Conn LSP连接
+	// Conn LSP connection
 	Conn interface{} `json:"-"`
-	// Process LSP服务器进程（如果有）
+	// Process LSP server process (if any)
 	Process interface{} `json:"-"`
-	// CreatedAt 创建时间
+	// CreatedAt creation time
 	CreatedAt time.Time `json:"created_at"`
-	// LastUsedAt 最后使用时间
+	// LastUsedAt last used time
 	LastUsedAt time.Time `json:"last_used_at"`
-	// IsInitialized 是否已初始化
+	// IsInitialized whether initialized
 	IsInitialized bool `json:"is_initialized"`
-	// InitializeParams 初始化参数
+	// InitializeParams initialization params
 	InitializeParams *LSPInitializeParams `json:"initialize_params,omitempty"`
-	// OpenedDocuments 已打开的文档集合，key为文档URI
+	// OpenedDocuments opened document set, keyed by document URI
 	OpenedDocuments map[string]bool `json:"opened_documents,omitempty"`
 }
 
-// UpdateLastUsed 更新最后使用时间
+// UpdateLastUsed updates the last used time
 func (s *LSPSession) UpdateLastUsed() {
 	s.LastUsedAt = time.Now()
 }
 
-// IsExpired 检查会话是否已过期
+// IsExpired checks whether the session has expired
 func (s *LSPSession) IsExpired(timeout time.Duration) bool {
 	return time.Since(s.LastUsedAt) > timeout
 }

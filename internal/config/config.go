@@ -1,5 +1,4 @@
 // config.go
-// 配置文件加载与校验，LSP/MCP/日志/会话等配置结构体
 // Loads and validates configuration files for LSP, MCP, logging, and session management.
 package config
 
@@ -11,158 +10,152 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LSPServerConfig LSP 服务器配置
 // LSPServerConfig represents the configuration for an LSP server
 type LSPServerConfig struct {
-	// Command LSP 服务器可执行文件路径或命令名
-	// Path or command name of the LSP server executable
+	// Command path or name of the LSP server executable
 	Command string `yaml:"command"`
-	// Args 启动参数
-	// Startup arguments
+	// Args startup arguments
 	Args []string `yaml:"args"`
-	// InitializationOptions 初始化选项
-	// Initialization options
+	// InitializationOptions initialization options
 	InitializationOptions map[string]interface{} `yaml:"initialization_options"`
-	// Env 环境变量
-	// Environment variables
+	// Env environment variables
 	Env map[string]string `yaml:"env"`
 }
 
-// MCPServerConfig MCP服务器配置
+// MCPServerConfig MCP server configuration
 type MCPServerConfig struct {
-	// Name 服务器名称
+	// Name server name
 	Name string `yaml:"name"`
-	// Version 服务器版本
+	// Version server version
 	Version string `yaml:"version"`
-	// Description 服务器描述
+	// Description server description
 	Description string `yaml:"description"`
 }
 
-// LoggingConfig 日志配置
+// LoggingConfig logging configuration
 type LoggingConfig struct {
-	// Level 日志级别
+	// Level log level
 	Level string `yaml:"level"`
-	// Format 日志格式
+	// Format log format
 	Format string `yaml:"format"`
-	// FileOutput 是否输出到文件
+	// FileOutput whether to output to a file
 	FileOutput bool `yaml:"file_output"`
-	// FilePath 日志文件路径
+	// FilePath log file path
 	FilePath string `yaml:"file_path"`
 }
 
-// SessionConfig 会话管理配置
 // SessionConfig represents session management configuration
 type SessionConfig struct {
-	// MaxSessions 最大并发会话数
+	// MaxSessions maximum concurrent sessions
 	MaxSessions int `yaml:"max_sessions"`
 }
 
-// Config 应用程序配置
+// Config application configuration
 type Config struct {
-	// LSPServers LSP服务器配置映射
+	// LSPServers LSP server configuration map
 	LSPServers map[string]*LSPServerConfig `yaml:"lsp_servers"`
-	// MCPServer MCP服务器配置
+	// MCPServer MCP server configuration
 	MCPServer *MCPServerConfig `yaml:"mcp_server"`
-	// Logging 日志配置
+	// Logging logging configuration
 	Logging *LoggingConfig `yaml:"logging"`
-	// Session 会话管理配置
+	// Session session management configuration
 	Session *SessionConfig `yaml:"session"`
 }
 
-// LoadConfig 从指定路径加载配置文件
+// LoadConfig loads a configuration file from the given path
 func LoadConfig(configPath string) (*Config, error) {
-	// 检查配置文件是否存在
+	// Check if the config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("配置文件不存在: %s", configPath)
+		return nil, fmt.Errorf("config file does not exist: %s", configPath)
 	}
 
-	// 读取配置文件内容
+	// Read config file contents
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %w", err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	// 解析YAML配置
+	// Parse YAML config
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %w", err)
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	// 验证配置
+	// Validate config
 	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("配置验证失败: %w", err)
+		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	return &config, nil
 }
 
-// LoadConfigFromDefault 从默认路径加载配置文件
+// LoadConfigFromDefault loads a config file from the default path
 func LoadConfigFromDefault() (*Config, error) {
-	// 获取当前可执行文件所在目录
+	// Get the directory of the current executable
 	exePath, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("获取可执行文件路径失败: %w", err)
+		return nil, fmt.Errorf("failed to get executable path: %w", err)
 	}
 	dir := filepath.Dir(exePath)
 
-	// 构建同目录下的 config.yaml 路径
+	// Build config.yaml path in the same directory
 	configPath := filepath.Join(dir, "config.yaml")
 	return LoadConfig(configPath)
 }
 
-// Validate 验证配置的有效性
+// Validate validates the configuration
 func (c *Config) Validate() error {
-	// 验证LSP服务器配置
+	// Validate LSP server configuration
 	if len(c.LSPServers) == 0 {
-		return fmt.Errorf("至少需要配置一个LSP服务器")
+		return fmt.Errorf("at least one LSP server must be configured")
 	}
 
 	for languageID, serverConfig := range c.LSPServers {
 		if languageID == "" {
-			return fmt.Errorf("语言ID不能为空")
+			return fmt.Errorf("language ID cannot be empty")
 		}
 		if serverConfig.Command == "" {
-			return fmt.Errorf("LSP服务器命令不能为空: %s", languageID)
+			return fmt.Errorf("LSP server command cannot be empty: %s", languageID)
 		}
 	}
 
-	// 验证MCP服务器配置
+	// Validate MCP server configuration
 	if c.MCPServer == nil {
-		return fmt.Errorf("MCP服务器配置不能为空")
+		return fmt.Errorf("MCP server configuration cannot be nil")
 	}
 	if c.MCPServer.Name == "" {
-		return fmt.Errorf("MCP服务器名称不能为空")
+		return fmt.Errorf("MCP server name cannot be empty")
 	}
 	if c.MCPServer.Version == "" {
-		return fmt.Errorf("MCP服务器版本不能为空")
+		return fmt.Errorf("MCP server version cannot be empty")
 	}
 
-	// 验证日志配置
+	// Validate logging configuration
 	if c.Logging == nil {
-		return fmt.Errorf("日志配置不能为空")
+		return fmt.Errorf("logging configuration cannot be nil")
 	}
 	validLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
 	if !validLevels[c.Logging.Level] {
-		return fmt.Errorf("无效的日志级别: %s", c.Logging.Level)
+		return fmt.Errorf("invalid log level: %s", c.Logging.Level)
 	}
 	validFormats := map[string]bool{"json": true, "text": true}
 	if !validFormats[c.Logging.Format] {
-		return fmt.Errorf("无效的日志格式: %s", c.Logging.Format)
+		return fmt.Errorf("invalid log format: %s", c.Logging.Format)
 	}
 
-	// 验证会话配置
+	// Validate session configuration
 	if c.Session == nil {
-		return fmt.Errorf("会话配置不能为空")
+		return fmt.Errorf("session configuration cannot be nil")
 	}
 
 	if c.Session.MaxSessions <= 0 {
-		return fmt.Errorf("最大会话数必须大于0")
+		return fmt.Errorf("max sessions must be greater than 0")
 	}
 
 	return nil
 }
 
-// GetLSPServerConfig 根据语言ID获取LSP服务器配置
+// GetLSPServerConfig returns the LSP server config by language ID
 func (c *Config) GetLSPServerConfig(languageID string) (*LSPServerConfig, bool) {
 	config, exists := c.LSPServers[languageID]
 	return config, exists

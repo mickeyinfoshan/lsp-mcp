@@ -12,35 +12,35 @@ import (
 	"github.com/mickeyinfoshan/lsp-mcp/internal/session"
 )
 
-// Server MCP服务器
+// Server MCP server
 type Server struct {
-	// mcpServer MCP服务器实例
+	// mcpServer MCP server instance
 	mcpServer *server.MCPServer
-	// sessionManager 会话管理器
+	// sessionManager session manager
 	sessionManager *session.Manager
-	// config 配置信息
+	// config configuration info
 	config *config.Config
 }
 
-// NewServer 创建新的MCP服务器
+// NewServer creates a new MCP server
 func NewServer(cfg *config.Config) (*Server, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("配置不能为空")
+		return nil, fmt.Errorf("config cannot be nil")
 	}
 
-	// 创建MCP服务器实例
+	// Create MCP server instance
 	mcpServer := server.NewMCPServer(
 		cfg.MCPServer.Name,
 		cfg.MCPServer.Version,
-		server.WithToolCapabilities(true), // 启用工具功能
-		server.WithLogging(),              // 启用日志
-		server.WithRecovery(),             // 启用恢复机制
+		server.WithToolCapabilities(true), // Enable tool capabilities
+		server.WithLogging(),              // Enable logging
+		server.WithRecovery(),             // Enable recovery
 	)
 
-	// 创建会话管理器
+	// Create session manager
 	sessionManager, err := session.NewManager(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("创建会话管理器失败: %w", err)
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
 	s := &Server{
@@ -49,60 +49,60 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		config:         cfg,
 	}
 
-	// 注册LSP工具
+	// Register LSP tools
 	if err := s.registerLSPTools(); err != nil {
-		return nil, fmt.Errorf("注册LSP工具失败: %w", err)
+		return nil, fmt.Errorf("failed to register LSP tools: %w", err)
 	}
 
 	return s, nil
 }
 
-// registerLSPTools 注册LSP相关的MCP工具
+// registerLSPTools registers MCP tools related to LSP
 func (s *Server) registerLSPTools() error {
-	// 注册lsp.initialize工具
+	// Register lsp.initialize tool
 	// if err := s.registerInitializeTool(); err != nil {
-	// 	return fmt.Errorf("注册initialize工具失败: %w", err)
+	// 	return fmt.Errorf("failed to register initialize tool: %w", err)
 	// }
 
-	// 注册lsp.shutdown工具
+	// Register lsp.shutdown tool
 	if err := s.registerShutdownTool(); err != nil {
-		return fmt.Errorf("注册shutdown工具失败: %w", err)
+		return fmt.Errorf("failed to register shutdown tool: %w", err)
 	}
 
-	// 注册lsp.definition工具
+	// Register lsp.definition tool
 	if err := s.registerDefinitionTool(); err != nil {
-		return fmt.Errorf("注册definition工具失败: %w", err)
+		return fmt.Errorf("failed to register definition tool: %w", err)
 	}
 
-	// 注册lsp.references工具
+	// Register lsp.references tool
 	if err := s.registerReferencesTool(); err != nil {
-		return fmt.Errorf("注册references工具失败: %w", err)
+		return fmt.Errorf("failed to register references tool: %w", err)
 	}
 
-	// 注册lsp.hover工具
+	// Register lsp.hover tool
 	if err := s.registerHoverTool(); err != nil {
-		return fmt.Errorf("注册hover工具失败: %w", err)
+		return fmt.Errorf("failed to register hover tool: %w", err)
 	}
 
-	// 注册lsp.completion工具
+	// Register lsp.completion tool
 	if err := s.registerCompletionTool(); err != nil {
-		return fmt.Errorf("注册completion工具失败: %w", err)
+		return fmt.Errorf("failed to register completion tool: %w", err)
 	}
 
 	return nil
 }
 
-// registerInitializeTool 注册lsp.initialize工具
+// registerInitializeTool registers the lsp.initialize tool
 func (s *Server) registerInitializeTool() error {
 	initializeTool := mcp.NewTool("lsp_initialize",
-		mcp.WithDescription("初始化（或复用）一个 LSP 会话。会自动为指定语言和项目根目录启动语言服务器进程，并建立通信。"),
+		mcp.WithDescription("Initialize (or reuse) an LSP session. It automatically starts the language server for the specified language and project root and establishes communication."),
 		mcp.WithString("language_id",
 			mcp.Required(),
-			mcp.Description("编程语言标识符，例如 'go'、'python'、'typescript'。例：'go'"),
+			mcp.Description("Programming language identifier, e.g. 'go', 'python', 'typescript'. Example: 'go'."),
 		),
 		mcp.WithString("root_uri",
 			mcp.Required(),
-			mcp.Description("项目根目录的 URI，形如 'file:///path/to/project'。例：'file:///Users/foo/bar'"),
+			mcp.Description("Project root URI, e.g. 'file:///path/to/project'. Example: 'file:///Users/foo/bar'."),
 		),
 	)
 
@@ -110,17 +110,17 @@ func (s *Server) registerInitializeTool() error {
 	return nil
 }
 
-// registerShutdownTool 注册lsp.shutdown工具
+// registerShutdownTool registers the lsp.shutdown tool
 func (s *Server) registerShutdownTool() error {
 	shutdownTool := mcp.NewTool("lsp_shutdown",
-		mcp.WithDescription("关闭指定 LSP 会话，释放对应语言服务器进程和资源。"),
+		mcp.WithDescription("Close the specified LSP session and release the language server process and resources."),
 		mcp.WithString("language_id",
 			mcp.Required(),
-			mcp.Description("要关闭的编程语言标识符。例：'go'"),
+			mcp.Description("Language identifier to close. Example: 'go'."),
 		),
 		mcp.WithString("root_uri",
 			mcp.Required(),
-			mcp.Description("要关闭的会话对应的项目根目录 URI。例：'file:///Users/foo/bar'"),
+			mcp.Description("Project root URI of the session to close. Example: 'file:///Users/foo/bar'."),
 		),
 	)
 
@@ -128,32 +128,32 @@ func (s *Server) registerShutdownTool() error {
 	return nil
 }
 
-// registerDefinitionTool 注册lsp.definition工具
+// registerDefinitionTool registers the lsp.definition tool
 func (s *Server) registerDefinitionTool() error {
 	definitionTool := mcp.NewTool("lsp_definition",
-		mcp.WithDescription("查找指定文档位置符号的定义（Go to Definition），自动处理文件同步。\n【重要】请确保 character 参数尽量精确落在目标 symbol 的字母或下划线等内部字符上，避免落在空格、标点、点号、括号等非 symbol 区域，这样能获得更准确的跳转体验。可选 symbol 参数辅助精确定位。"),
+		mcp.WithDescription("Find the definition of the symbol at the specified document position (Go to Definition) and handle file sync automatically.\n[Important] Keep the character parameter inside the target symbol (letter/underscore) rather than whitespace, punctuation, dot, or parentheses for more accurate jumps. Optional symbol helps with precise positioning."),
 		mcp.WithString("language_id",
 			mcp.Required(),
-			mcp.Description("编程语言标识符。例：'go'"),
+			mcp.Description("Programming language identifier. Example: 'go'."),
 		),
 		mcp.WithString("root_uri",
 			mcp.Required(),
-			mcp.Description("项目根目录的 URI。例：'file:///Users/foo/bar'"),
+			mcp.Description("Project root URI. Example: 'file:///Users/foo/bar'."),
 		),
 		mcp.WithString("file_uri",
 			mcp.Required(),
-			mcp.Description("目标文档的 URI。例：'file:///Users/foo/bar/main.go'"),
+			mcp.Description("Target document URI. Example: 'file:///Users/foo/bar/main.go'."),
 		),
 		mcp.WithNumber("line",
 			mcp.Required(),
-			mcp.Description("目标位置的行号（从 0 开始）。例：10"),
+			mcp.Description("Zero-based line number. Example: 10."),
 		),
 		mcp.WithNumber("character",
 			mcp.Required(),
-			mcp.Description("目标位置的字符偏移（从 0 开始）。例：5"),
+			mcp.Description("Zero-based character offset. Example: 5."),
 		),
 		mcp.WithString("symbol",
-			mcp.Description("目标符号名称，辅助精确定位。例：'MyFunc'"),
+			mcp.Description("Target symbol name (optional) to aid precise positioning. Example: 'MyFunc'."),
 		),
 	)
 
@@ -161,35 +161,35 @@ func (s *Server) registerDefinitionTool() error {
 	return nil
 }
 
-// registerReferencesTool 注册lsp.references工具
+// registerReferencesTool registers the lsp.references tool
 func (s *Server) registerReferencesTool() error {
 	referencesTool := mcp.NewTool("lsp_references",
-		mcp.WithDescription("查找指定文档位置符号的所有引用（Find References），可选包含声明。\n【重要】请确保 character 参数尽量精确落在目标 symbol 的字母或下划线等内部字符上，避免落在空格、标点、点号、括号等非 symbol 区域，这样能获得更准确的引用体验。可选 symbol 参数辅助精确定位。"),
+		mcp.WithDescription("Find all references to the symbol at the specified document position (Find References), optionally including the declaration.\n[Important] Keep the character parameter inside the target symbol (letter/underscore) rather than whitespace, punctuation, dot, or parentheses for more accurate references. Optional symbol helps with precise positioning."),
 		mcp.WithString("language_id",
 			mcp.Required(),
-			mcp.Description("编程语言标识符。例：'go'"),
+			mcp.Description("Programming language identifier. Example: 'go'."),
 		),
 		mcp.WithString("root_uri",
 			mcp.Required(),
-			mcp.Description("项目根目录的 URI。例：'file:///Users/foo/bar'"),
+			mcp.Description("Project root URI. Example: 'file:///Users/foo/bar'."),
 		),
 		mcp.WithString("file_uri",
 			mcp.Required(),
-			mcp.Description("目标文档的 URI。例：'file:///Users/foo/bar/main.go'"),
+			mcp.Description("Target document URI. Example: 'file:///Users/foo/bar/main.go'."),
 		),
 		mcp.WithNumber("line",
 			mcp.Required(),
-			mcp.Description("目标位置的行号（从 0 开始）。例：10"),
+			mcp.Description("Zero-based line number. Example: 10."),
 		),
 		mcp.WithNumber("character",
 			mcp.Required(),
-			mcp.Description("目标位置的字符偏移（从 0 开始）。例：5"),
+			mcp.Description("Zero-based character offset. Example: 5."),
 		),
 		mcp.WithBoolean("include_declaration",
-			mcp.Description("结果中是否包含符号声明（默认为 false）。例：true"),
+			mcp.Description("Whether to include the symbol declaration in results (default false). Example: true."),
 		),
 		mcp.WithString("symbol",
-			mcp.Description("目标符号名称，辅助精确定位。例：'MyFunc'"),
+			mcp.Description("Target symbol name (optional) to aid precise positioning. Example: 'MyFunc'."),
 		),
 	)
 
@@ -197,32 +197,32 @@ func (s *Server) registerReferencesTool() error {
 	return nil
 }
 
-// registerHoverTool 注册lsp.hover工具
+// registerHoverTool registers the lsp.hover tool
 func (s *Server) registerHoverTool() error {
 	hoverTool := mcp.NewTool("lsp_hover",
-		mcp.WithDescription("获取指定文档位置符号的悬停信息（Hover），包括类型、文档等。\n【重要】请确保 character 参数尽量精确落在目标 symbol 的字母或下划线等内部字符上，避免落在空格、标点、点号、括号等非 symbol 区域，这样能获得更准确的悬停体验。可选 symbol 参数辅助精确定位。"),
+		mcp.WithDescription("Get hover info for the symbol at the specified document position (Hover), including type and documentation.\n[Important] Keep the character parameter inside the target symbol (letter/underscore) rather than whitespace, punctuation, dot, or parentheses for more accurate hover results. Optional symbol helps with precise positioning."),
 		mcp.WithString("language_id",
 			mcp.Required(),
-			mcp.Description("编程语言标识符。例：'go'"),
+			mcp.Description("Programming language identifier. Example: 'go'."),
 		),
 		mcp.WithString("root_uri",
 			mcp.Required(),
-			mcp.Description("项目根目录的 URI。例：'file:///Users/foo/bar'"),
+			mcp.Description("Project root URI. Example: 'file:///Users/foo/bar'."),
 		),
 		mcp.WithString("file_uri",
 			mcp.Required(),
-			mcp.Description("目标文档的 URI。例：'file:///Users/foo/bar/main.go'"),
+			mcp.Description("Target document URI. Example: 'file:///Users/foo/bar/main.go'."),
 		),
 		mcp.WithNumber("line",
 			mcp.Required(),
-			mcp.Description("目标位置的行号（从 0 开始）。例：10"),
+			mcp.Description("Zero-based line number. Example: 10."),
 		),
 		mcp.WithNumber("character",
 			mcp.Required(),
-			mcp.Description("目标位置的字符偏移（从 0 开始）。例：5"),
+			mcp.Description("Zero-based character offset. Example: 5."),
 		),
 		mcp.WithString("symbol",
-			mcp.Description("目标符号名称，辅助精确定位。例：'MyFunc'"),
+			mcp.Description("Target symbol name (optional) to aid precise positioning. Example: 'MyFunc'."),
 		),
 	)
 
@@ -230,35 +230,35 @@ func (s *Server) registerHoverTool() error {
 	return nil
 }
 
-// registerCompletionTool 注册lsp.completion工具
+// registerCompletionTool registers the lsp.completion tool
 func (s *Server) registerCompletionTool() error {
 	completionTool := mcp.NewTool("lsp_completion",
-		mcp.WithDescription("获取指定文档位置的代码补全建议（Completion），支持触发类型和字符。\n【重要】请确保 character 参数尽量精确落在目标 symbol 的字母或下划线等内部字符上，避免落在空格、标点、点号、括号等非 symbol 区域，这样能获得更准确的补全体验。"),
+		mcp.WithDescription("Get completion suggestions at the specified document position (Completion), supporting trigger kind and character.\n[Important] Keep the character parameter inside the target symbol (letter/underscore) rather than whitespace, punctuation, dot, or parentheses for more accurate completions."),
 		mcp.WithString("language_id",
 			mcp.Required(),
-			mcp.Description("编程语言标识符。例：'go'"),
+			mcp.Description("Programming language identifier. Example: 'go'."),
 		),
 		mcp.WithString("root_uri",
 			mcp.Required(),
-			mcp.Description("项目根目录的 URI。例：'file:///Users/foo/bar'"),
+			mcp.Description("Project root URI. Example: 'file:///Users/foo/bar'."),
 		),
 		mcp.WithString("file_uri",
 			mcp.Required(),
-			mcp.Description("目标文档的 URI。例：'file:///Users/foo/bar/main.go'"),
+			mcp.Description("Target document URI. Example: 'file:///Users/foo/bar/main.go'."),
 		),
 		mcp.WithNumber("line",
 			mcp.Required(),
-			mcp.Description("目标位置的行号（从 0 开始）。例：10"),
+			mcp.Description("Zero-based line number. Example: 10."),
 		),
 		mcp.WithNumber("character",
 			mcp.Required(),
-			mcp.Description("目标位置的字符偏移（从 0 开始）。例：5"),
+			mcp.Description("Zero-based character offset. Example: 5."),
 		),
 		mcp.WithNumber("trigger_kind",
-			mcp.Description("补全触发类型（1=手动，2=输入字符，3=命令等，参见 LSP 规范）。例：2"),
+			mcp.Description("Completion trigger kind (1=manual, 2=trigger character, 3=command, etc.; see LSP spec). Example: 2."),
 		),
 		mcp.WithString("trigger_character",
-			mcp.Description("触发补全的字符（如 '.'、'>' 等，部分语言服务器支持）。例：'.'"),
+			mcp.Description("Trigger character for completion (e.g. '.', '>' ); supported by some language servers. Example: '.'."),
 		),
 	)
 
@@ -266,24 +266,24 @@ func (s *Server) registerCompletionTool() error {
 	return nil
 }
 
-// Serve 启动MCP服务器
+// Serve starts the MCP server
 func (s *Server) Serve() error {
-	log.Printf("启动MCP-LSP桥接服务器: %s v%s", s.config.MCPServer.Name, s.config.MCPServer.Version)
+	log.Printf("Starting MCP-LSP bridge server: %s v%s", s.config.MCPServer.Name, s.config.MCPServer.Version)
 	return server.ServeStdio(s.mcpServer)
 }
 
-// Shutdown 关闭服务器
+// Shutdown shuts down the server
 func (s *Server) Shutdown(ctx context.Context) error {
-	log.Println("正在关闭MCP-LSP桥接服务器...")
+	log.Println("Shutting down MCP-LSP bridge server...")
 
-	// 关闭会话管理器
+	// Shut down the session manager
 	if err := s.sessionManager.Shutdown(ctx); err != nil {
-		log.Printf("关闭会话管理器时出错: %v", err)
+		log.Printf("Error shutting down session manager: %v", err)
 	}
 
 	// MCPServer doesn't have a Shutdown method, it's managed by the transport layer
 	// The server will be closed when the transport (stdio, http, etc.) is stopped
 
-	log.Println("MCP-LSP桥接服务器已关闭")
+	log.Println("MCP-LSP bridge server stopped")
 	return nil
 }

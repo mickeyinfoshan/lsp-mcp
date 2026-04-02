@@ -1,34 +1,34 @@
 # MCP-LSP Bridge Service Makefile
 
-# 项目信息
+# Project information
 PROJECT_NAME := lsp-mcp
 VERSION := 1.1.0
 BUILD_TIME := $(shell date +"%Y-%m-%d %H:%M:%S")
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# Go 相关配置
+# Go configuration
 GO := go
 GOFLAGS := -ldflags "-X main.version=$(VERSION) -X 'main.buildTime=$(BUILD_TIME)' -X main.gitCommit=$(GIT_COMMIT)"
 BINARY_NAME := $(PROJECT_NAME)
 BUILD_DIR := ./bin
 CMD_DIR := ./cmd/server
 
-# 默认目标
+# Default target
 .PHONY: all
 all: clean build
 
-# 构建
+# Build
 .PHONY: build
 build:
-	@echo "构建 $(PROJECT_NAME)..."
+	@echo "Building $(PROJECT_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	$(GO) build $(GOFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_DIR)
-	@echo "构建完成: $(BUILD_DIR)/$(BINARY_NAME)"
+	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
-# 构建所有平台
+# Build for all platforms
 .PHONY: build-all
 build-all: clean
-	@echo "构建所有平台版本..."
+	@echo "Building all platform versions..."
 	@mkdir -p $(BUILD_DIR)
 	# Linux AMD64
 	GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(CMD_DIR)
@@ -40,157 +40,157 @@ build-all: clean
 	GOOS=darwin GOARCH=arm64 $(GO) build $(GOFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(CMD_DIR)
 	# Windows AMD64
 	GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_DIR)
-	@echo "所有平台构建完成"
+	@echo "All platform builds complete"
 
-# 运行
+# Run
 .PHONY: run
 run: build
-	@echo "启动 $(PROJECT_NAME)..."
+	@echo "Starting $(PROJECT_NAME)..."
 	$(BUILD_DIR)/$(BINARY_NAME)
 
-# 运行开发模式
+# Run in development mode
 .PHONY: dev
 dev:
-	@echo "开发模式启动 $(PROJECT_NAME)..."
+	@echo "Starting $(PROJECT_NAME) in development mode..."
 	$(GO) run $(CMD_DIR) -config ./config/config.yaml
 
-# 测试
+# Test
 .PHONY: test
 test:
-	@echo "运行测试..."
+	@echo "Running tests..."
 	$(GO) test -v ./...
 
-# 测试覆盖率
+# Test coverage
 .PHONY: test-coverage
 test-coverage:
-	@echo "运行测试并生成覆盖率报告..."
+	@echo "Running tests and generating coverage report..."
 	$(GO) test -v -coverprofile=coverage.out ./...
 	$(GO) tool cover -html=coverage.out -o coverage.html
-	@echo "覆盖率报告已生成: coverage.html"
+	@echo "Coverage report generated: coverage.html"
 
-# 代码格式化
+# Code formatting
 .PHONY: fmt
 fmt:
-	@echo "格式化代码..."
+	@echo "Formatting code..."
 	$(GO) fmt ./...
 
-# 代码检查
+# Code check
 .PHONY: vet
 vet:
-	@echo "代码检查..."
+	@echo "Checking code..."
 	$(GO) vet ./...
 
-# 依赖管理
+# Dependency management
 .PHONY: mod-tidy
 mod-tidy:
-	@echo "整理依赖..."
+	@echo "Tidying dependencies..."
 	$(GO) mod tidy
 
 .PHONY: mod-download
 mod-download:
-	@echo "下载依赖..."
+	@echo "Downloading dependencies..."
 	$(GO) mod download
 
-# 清理
+# Clean
 .PHONY: clean
 clean:
-	@echo "清理构建文件..."
+	@echo "Cleaning build files..."
 	@rm -rf $(BUILD_DIR)
 	@rm -f coverage.out coverage.html
 
-# 安装
+# Install
 .PHONY: install
 install: build
-	@echo "安装 $(PROJECT_NAME)..."
+	@echo "Installing $(PROJECT_NAME)..."
 	@cp $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin/
-	@echo "安装完成: /usr/local/bin/$(BINARY_NAME)"
+	@echo "Installation complete: /usr/local/bin/$(BINARY_NAME)"
 
-# 卸载
+# Uninstall
 .PHONY: uninstall
 uninstall:
-	@echo "卸载 $(PROJECT_NAME)..."
+	@echo "Uninstalling $(PROJECT_NAME)..."
 	@rm -f /usr/local/bin/$(BINARY_NAME)
-	@echo "卸载完成"
+	@echo "Uninstallation complete"
 
-# 创建配置目录和示例配置
+# Create configuration directory and sample config
 .PHONY: setup-config
 setup-config:
-	@echo "设置配置文件..."
+	@echo "Setting up configuration file..."
 	@mkdir -p ./config
 	@if [ ! -f ./config/config.yaml ]; then \
-		echo "配置文件已存在，跳过创建"; \
+		echo "Configuration file already exists, skipping creation"; \
 	else \
-		echo "配置文件不存在，请手动创建"; \
+		echo "Configuration file does not exist, please create it manually"; \
 	fi
 
-# 创建日志目录
+# Create log directory
 .PHONY: setup-logs
 setup-logs:
-	@echo "创建日志目录..."
+	@echo "Creating log directory..."
 	@mkdir -p ./logs
 
-# 完整设置
+# Full setup
 .PHONY: setup
 setup: setup-config setup-logs mod-download
-	@echo "项目设置完成"
+	@echo "Project setup complete"
 
-# 代码质量检查
+# Code quality check
 .PHONY: lint
 lint: fmt vet
-	@echo "代码质量检查完成"
+	@echo "Code quality check complete"
 
-# 完整的CI流程
+# Full CI pipeline
 .PHONY: ci
 ci: mod-tidy lint test build
-	@echo "CI流程完成"
+	@echo "CI pipeline complete"
 
-# 显示帮助
+# Show help
 .PHONY: help
 help:
 	@echo "MCP-LSP Bridge Service Makefile"
 	@echo ""
-	@echo "可用目标:"
-	@echo "  build          - 构建项目"
-	@echo "  build-all      - 构建所有平台版本"
-	@echo "  run            - 构建并运行项目"
-	@echo "  dev            - 开发模式运行"
-	@echo "  test           - 运行测试"
-	@echo "  test-coverage  - 运行测试并生成覆盖率报告"
-	@echo "  fmt            - 格式化代码"
-	@echo "  vet            - 代码检查"
-	@echo "  lint           - 代码质量检查 (fmt + vet)"
-	@echo "  mod-tidy       - 整理依赖"
-	@echo "  mod-download   - 下载依赖"
-	@echo "  clean          - 清理构建文件"
-	@echo "  install        - 安装到系统"
-	@echo "  uninstall      - 从系统卸载"
-	@echo "  setup          - 项目初始设置"
-	@echo "  setup-config   - 设置配置文件"
-	@echo "  setup-logs     - 创建日志目录"
-	@echo "  ci             - 完整CI流程"
-	@echo "  help           - 显示此帮助信息"
+	@echo "Available targets:"
+	@echo "  build          - Build project"
+	@echo "  build-all      - Build all platform versions"
+	@echo "  run            - Build and run project"
+	@echo "  dev            - Run in development mode"
+	@echo "  test           - Run tests"
+	@echo "  test-coverage  - Run tests and generate coverage report"
+	@echo "  fmt            - Format code"
+	@echo "  vet            - Check code"
+	@echo "  lint           - Code quality check (fmt + vet)"
+	@echo "  mod-tidy       - Tidy dependencies"
+	@echo "  mod-download   - Download dependencies"
+	@echo "  clean          - Clean build files"
+	@echo "  install        - Install to system"
+	@echo "  uninstall      - Uninstall from system"
+	@echo "  setup          - Initial project setup"
+	@echo "  setup-config   - Set up configuration file"
+	@echo "  setup-logs     - Create log directory"
+	@echo "  ci             - Full CI pipeline"
+	@echo "  help           - Show this help information"
 	@echo ""
-	@echo "示例:"
-	@echo "  make build     # 构建项目"
-	@echo "  make dev       # 开发模式运行"
-	@echo "  make test      # 运行测试"
-	@echo "  make ci        # 运行完整CI流程"
+	@echo "Examples:"
+	@echo "  make build     # Build project"
+	@echo "  make dev       # Run in development mode"
+	@echo "  make test      # Run tests"
+	@echo "  make ci        # Run full CI pipeline"
 
-# 版本信息
+# Version information
 .PHONY: version
 version:
-	@echo "项目: $(PROJECT_NAME)"
-	@echo "版本: $(VERSION)"
-	@echo "构建时间: $(BUILD_TIME)"
-	@echo "Git提交: $(GIT_COMMIT)"
+	@echo "Project: $(PROJECT_NAME)"
+	@echo "Version: $(VERSION)"
+	@echo "Build Time: $(BUILD_TIME)"
+	@echo "Git Commit: $(GIT_COMMIT)"
 
-# 发布release包
+# Build release package
 .PHONY: release
 release: build
-	@echo "准备release目录..."
+	@echo "Preparing release directory..."
 	@rm -rf release/lsp-mcp-release
 	@mkdir -p release/lsp-mcp-release
 	@cp ./bin/$(BINARY_NAME) release/lsp-mcp-release/lsp-mcp
 	@cp release/config.yaml release/lsp-mcp-release/config.yaml
 	@cd release && zip -y -r lsp-mcp-release-$(VERSION).zip lsp-mcp-release
-	@echo "release包已生成: release/lsp-mcp-release-$(VERSION).zip"
+	@echo "Release package generated: release/lsp-mcp-release-$(VERSION).zip"

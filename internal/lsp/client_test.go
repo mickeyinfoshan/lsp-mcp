@@ -13,8 +13,8 @@ import (
 	"github.com/mickeyinfoshan/lsp-mcp/pkg/types"
 )
 
-// readWriteCloser 实现 io.ReadWriteCloser，组合 reader/writer
-// 用于测试管道读写
+// readWriteCloser implements io.ReadWriteCloser by combining reader/writer
+// Used to test pipe reads/writes
 type readWriteCloser struct {
 	reader io.Reader
 	writer io.Writer
@@ -29,11 +29,11 @@ func (rwc *readWriteCloser) Write(p []byte) (int, error) {
 }
 
 func (rwc *readWriteCloser) Close() error {
-	// 测试用，直接返回 nil
+	// For tests, just return nil
 	return nil
 }
 
-// createTestConfig 创建测试配置
+// createTestConfig creates test config
 func createTestConfig(t *testing.T) *config.Config {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_config.yaml")
@@ -68,52 +68,52 @@ session:
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
-		t.Fatalf("创建测试配置文件失败: %v", err)
+		t.Fatalf("failed to create test config file: %v", err)
 	}
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("加载测试配置失败: %v", err)
+		t.Fatalf("failed to load test config: %v", err)
 	}
 
 	return cfg
 }
 
-// TestNewClient 测试创建新的LSP客户端
+// TestNewClient tests creating a new LSP client
 func TestNewClient(t *testing.T) {
 	cfg := createTestConfig(t)
 
 	client := NewClient(cfg)
 	if client == nil {
-		t.Fatal("创建LSP客户端失败")
+		t.Fatal("failed to create LSP client")
 	}
 
-	// 验证客户端字段
+	// Validate client fields
 	if client.config != cfg {
-		t.Error("配置未正确设置")
+		t.Error("config not set correctly")
 	}
 
 	if client.sessions == nil {
-		t.Error("会话映射未初始化")
+		t.Error("session map not initialized")
 	}
 
 	if client.ctx == nil {
-		t.Error("上下文未初始化")
+		t.Error("context not initialized")
 	}
 
 	if client.cancel == nil {
-		t.Error("取消函数未初始化")
+		t.Error("cancel function not initialized")
 	}
 
-	// 清理资源
+	// Cleanup
 	client.Close()
 }
 
-// TestGetOrCreateSession_NewSession 测试创建新会话
+// TestGetOrCreateSession_NewSession tests creating a new session
 func TestGetOrCreateSession_NewSession(t *testing.T) {
-	// 跳过需要实际LSP服务器的测试
+	// Skip tests that require a real LSP server
 	if testing.Short() {
-		t.Skip("跳过需要LSP服务器的测试")
+		t.Skip("skip tests that require an LSP server")
 	}
 
 	cfg := createTestConfig(t)
@@ -123,20 +123,20 @@ func TestGetOrCreateSession_NewSession(t *testing.T) {
 	languageID := "go"
 	rootURI := "file:///tmp/test"
 
-	// 由于使用echo命令作为测试LSP服务器，这个测试会失败
-	// 但我们可以测试错误处理逻辑
+	// Since we use echo as the test LSP server, this test will fail
+	// but we can test error handling logic
 	session, err := client.GetOrCreateSession(languageID, rootURI)
 	if err == nil {
-		t.Log("意外成功创建会话（使用echo命令）")
+		t.Log("unexpectedly created session (using echo command)")
 		if session != nil {
-			t.Log("会话创建成功")
+			t.Log("session created successfully")
 		}
 	} else {
-		t.Logf("预期的错误: %v", err)
+		t.Logf("expected error: %v", err)
 	}
 }
 
-// TestGetOrCreateSession_ExistingSession 测试获取现有会话
+// TestGetOrCreateSession_ExistingSession tests getting an existing session
 func TestGetOrCreateSession_ExistingSession(t *testing.T) {
 	cfg := createTestConfig(t)
 	client := NewClient(cfg)
@@ -149,11 +149,11 @@ func TestGetOrCreateSession_ExistingSession(t *testing.T) {
 		RootURI:    rootURI,
 	}
 
-	// 手动创建一个模拟会话
+	// Manually create a mock session
 	mockSession := &types.LSPSession{
 		Key:           sessionKey,
-		Conn:          nil, // 模拟连接
-		Process:       nil, // 模拟进程
+		Conn:          nil, // mock connection
+		Process:       nil, // mock process
 		CreatedAt:     time.Now(),
 		LastUsedAt:    time.Now(),
 		IsInitialized: true,
@@ -163,32 +163,32 @@ func TestGetOrCreateSession_ExistingSession(t *testing.T) {
 	client.sessions[sessionKey.String()] = mockSession
 	client.sessionsMutex.Unlock()
 
-	// 测试获取现有会话
+	// Test getting an existing session
 	session, err := client.GetOrCreateSession(languageID, rootURI)
 	if err != nil {
-		t.Fatalf("获取现有会话失败: %v", err)
+		t.Fatalf("failed to get existing session: %v", err)
 	}
 
 	if session != mockSession {
-		t.Error("返回的会话不是预期的会话")
+		t.Error("returned session is not the expected session")
 	}
 
-	// 验证最后使用时间已更新
+	// Verify last used time updated
 	if session.LastUsedAt.Before(mockSession.LastUsedAt) {
-		t.Error("最后使用时间未更新")
+		t.Error("last used time not updated")
 	}
 }
 
-// TestGetOrCreateSession_MaxSessionsLimit 测试最大会话数限制
+// TestGetOrCreateSession_MaxSessionsLimit tests max sessions limit
 func TestGetOrCreateSession_MaxSessionsLimit(t *testing.T) {
 	cfg := createTestConfig(t)
-	// 设置较小的最大会话数用于测试
+	// Set a smaller max sessions for testing
 	cfg.Session.MaxSessions = 2
 
 	client := NewClient(cfg)
 	defer client.Close()
 
-	// 手动添加会话直到达到限制
+	// Manually add sessions until reaching the limit
 	for i := 0; i < cfg.Session.MaxSessions; i++ {
 		sessionKey := types.SessionKey{
 			LanguageID: "go",
@@ -207,40 +207,40 @@ func TestGetOrCreateSession_MaxSessionsLimit(t *testing.T) {
 		client.sessionsMutex.Unlock()
 	}
 
-	// 尝试创建超出限制的会话
+	// Try to create a session beyond the limit
 	_, err := client.GetOrCreateSession("go", "file:///tmp/test_overflow")
 	if err == nil {
-		t.Error("期望因达到最大会话数限制而失败")
+		t.Error("expected failure due to max sessions limit")
 	}
 
-	if !strings.Contains(err.Error(), "最大会话数限制") {
-		t.Errorf("错误消息不正确: %v", err)
+	if !strings.Contains(err.Error(), "max sessions limit reached") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 
-// TestGetOrCreateSession_UnsupportedLanguage 测试不支持的语言
+// TestGetOrCreateSession_UnsupportedLanguage tests unsupported language
 func TestGetOrCreateSession_UnsupportedLanguage(t *testing.T) {
 	cfg := createTestConfig(t)
 	client := NewClient(cfg)
 	defer client.Close()
 
-	// 尝试使用不支持的语言
+	// Try using an unsupported language
 	_, err := client.GetOrCreateSession("unsupported", "file:///tmp/test")
 	if err == nil {
-		t.Error("期望因不支持的语言而失败")
+		t.Error("expected failure due to unsupported language")
 	}
 
-	if !strings.Contains(err.Error(), "不支持的语言") {
-		t.Errorf("错误消息不正确: %v", err)
+	if !strings.Contains(err.Error(), "unsupported language") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 
-// TestClose 测试关闭客户端
+// TestClose tests closing the client
 func TestClose(t *testing.T) {
 	cfg := createTestConfig(t)
 	client := NewClient(cfg)
 
-	// 添加一个模拟会话
+	// Add a mock session
 	sessionKey := types.SessionKey{
 		LanguageID: "go",
 		RootURI:    "file:///tmp/test",
@@ -257,88 +257,88 @@ func TestClose(t *testing.T) {
 	client.sessions[sessionKey.String()] = mockSession
 	client.sessionsMutex.Unlock()
 
-	// 测试关闭
+	// Test close
 	err := client.Close()
 	if err != nil {
-		t.Errorf("关闭客户端失败: %v", err)
+		t.Errorf("failed to close client: %v", err)
 	}
 
-	// 验证上下文已取消
+	// Verify context canceled
 	select {
 	case <-client.ctx.Done():
-		// 预期行为
+		// Expected behavior
 	default:
-		t.Error("上下文未被取消")
+		t.Error("context was not canceled")
 	}
 
-	// 验证会话已清理
+	// Verify sessions cleaned up
 	client.sessionsMutex.RLock()
 	sessionCount := len(client.sessions)
 	client.sessionsMutex.RUnlock()
 
 	if sessionCount != 0 {
-		t.Errorf("期望会话数为0，实际为%d", sessionCount)
+		t.Errorf("expected session count 0, got %d", sessionCount)
 	}
 }
 
-// TestReadWriteCloser 测试readWriteCloser实现
+// TestReadWriteCloser tests readWriteCloser implementation
 func TestReadWriteCloser(t *testing.T) {
-	// 创建测试管道
+	// Create test pipes
 	r1, w1, err := os.Pipe()
 	if err != nil {
-		t.Fatalf("创建管道1失败: %v", err)
+		t.Fatalf("failed to create pipe 1: %v", err)
 	}
 	defer r1.Close()
 	defer w1.Close()
 
 	r2, w2, err := os.Pipe()
 	if err != nil {
-		t.Fatalf("创建管道2失败: %v", err)
+		t.Fatalf("failed to create pipe 2: %v", err)
 	}
 	defer r2.Close()
 	defer w2.Close()
 
-	// 创建readWriteCloser
+	// Create readWriteCloser
 	rwc := &readWriteCloser{
 		reader: r1,
 		writer: w2,
 	}
 
-	// 测试写入
+	// Test write
 	testData := []byte("test data")
 	n, err := rwc.Write(testData)
 	if err != nil {
-		t.Errorf("写入失败: %v", err)
+		t.Errorf("write failed: %v", err)
 	}
 	if n != len(testData) {
-		t.Errorf("写入字节数不正确: 期望%d，实际%d", len(testData), n)
+		t.Errorf("bytes written mismatch: expected %d, got %d", len(testData), n)
 	}
 
-	// 关闭写入端以便读取
+	// Close write end to allow reading
 	w1.Write(testData)
 	w1.Close()
 
-	// 测试读取
+	// Test read
 	buf := make([]byte, len(testData))
 	n, err = rwc.Read(buf)
 	if err != nil {
-		t.Errorf("读取失败: %v", err)
+		t.Errorf("read failed: %v", err)
 	}
 	if n != len(testData) {
-		t.Errorf("读取字节数不正确: 期望%d，实际%d", len(testData), n)
+		t.Errorf("bytes read mismatch: expected %d, got %d", len(testData), n)
 	}
 	if string(buf) != string(testData) {
-		t.Errorf("读取数据不正确: 期望%s，实际%s", string(testData), string(buf))
+		t.Errorf("data read mismatch: expected %s, got %s", string(testData), string(buf))
 	}
 
-	// 测试关闭
+	// Test close
 	err = rwc.Close()
 	if err != nil {
-		t.Errorf("关闭失败: %v", err)
+		t.Errorf("close failed: %v", err)
 	}
 }
 
-// TestBuildClientCapabilities 测试构建客户端能力
+// TestBuildClientCapabilities tests building client capabilities
 func TestBuildClientCapabilities(t *testing.T) {
 	cfg := createTestConfig(t)
 	client := NewClient(cfg)
@@ -346,15 +346,15 @@ func TestBuildClientCapabilities(t *testing.T) {
 
 	capabilities := client.buildClientCapabilities()
 	if capabilities.TextDocument == nil {
-		t.Error("客户端能力为空")
+		t.Error("client capabilities are nil")
 	}
 
-	// 验证基本能力
+	// Verify basic capabilities
 	if capabilities.TextDocument == nil {
-		t.Error("TextDocument能力未设置")
+		t.Error("TextDocument capability not set")
 	}
 
 	if capabilities.Workspace == nil {
-		t.Error("Workspace能力未设置")
+		t.Error("Workspace capability not set")
 	}
 }

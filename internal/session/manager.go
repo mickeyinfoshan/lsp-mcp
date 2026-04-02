@@ -1,4 +1,3 @@
-// LSP 会话生命周期与指标管理，负责请求分发与参数校验
 // Manages LSP session lifecycle, metrics, request dispatching, and parameter validation.
 package session
 
@@ -13,54 +12,47 @@ import (
 	"github.com/mickeyinfoshan/lsp-mcp/pkg/types"
 )
 
-// Manager 会话管理器
 // Manager manages LSP sessions and dispatches requests
 type Manager struct {
-	// lspClient LSP 客户端实例
 	// LSP client instance
 	lspClient *lsp.Client
-	// config 配置信息
 	// Configuration information
 	config *config.Config
-	// mutex 互斥锁
 	// Mutex for concurrent access
 	mutex sync.RWMutex
-	// ctx 上下文
 	// Context for session management
 	ctx context.Context
-	// cancel 取消函数
 	// Cancel function for context
 	cancel context.CancelFunc
-	// metrics 会话指标
 	// Session metrics
 	metrics *SessionMetrics
 }
 
-// SessionMetrics 会话指标
+// SessionMetrics session metrics
 type SessionMetrics struct {
-	// TotalRequests 总请求数
+	// TotalRequests total request count
 	TotalRequests int64 `json:"total_requests"`
-	// SuccessfulRequests 成功请求数
+	// SuccessfulRequests successful request count
 	SuccessfulRequests int64 `json:"successful_requests"`
-	// FailedRequests 失败请求数
+	// FailedRequests failed request count
 	FailedRequests int64 `json:"failed_requests"`
-	// AverageResponseTime 平均响应时间（毫秒）
+	// AverageResponseTime average response time (ms)
 	AverageResponseTime float64 `json:"average_response_time_ms"`
-	// SessionsCreated 创建的会话数
+	// SessionsCreated session count created
 	SessionsCreated int64 `json:"sessions_created"`
-	// SessionsClosed 关闭的会话数
+	// SessionsClosed session count closed
 	SessionsClosed int64 `json:"sessions_closed"`
-	// LastRequestTime 最后请求时间
+	// LastRequestTime last request time
 	LastRequestTime time.Time `json:"last_request_time"`
-	// mutex 指标互斥锁
+	// mutex protects metrics
 	mutex sync.RWMutex
 }
 
-// NewManager 创建新的会话管理器
+// NewManager creates a new session manager
 func NewManager(cfg *config.Config) (*Manager, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 创建LSP客户端
+	// Create LSP client
 	lspClient := lsp.NewClient(cfg)
 
 	manager := &Manager{
@@ -74,173 +66,173 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	return manager, nil
 }
 
-// GetLSPClient 获取LSP客户端实例
+// GetLSPClient returns the LSP client instance
 func (m *Manager) GetLSPClient() *lsp.Client {
 	return m.lspClient
 }
 
-// FindDefinition 查找变量定义
+// FindDefinition finds the definition of a symbol
 func (m *Manager) FindDefinition(ctx context.Context, req *types.FindDefinitionRequest) (*types.FindDefinitionResponse, error) {
 	startTime := time.Now()
 	m.metrics.incrementTotalRequests()
 	m.metrics.updateLastRequestTime(startTime)
 
-	// 验证请求参数
+	// Validate request parameters
 	if err := m.validateFindDefinitionRequest(req); err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.FindDefinitionResponse{
-			Error: fmt.Sprintf("请求参数验证失败: %v", err),
+			Error: fmt.Sprintf("request parameter validation failed: %v", err),
 		}, nil
 	}
 
-	// 调用LSP客户端查找定义
+	// Call LSP client to find definition
 	response, err := m.lspClient.FindDefinition(ctx, req)
 	if err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.FindDefinitionResponse{
-			Error: fmt.Sprintf("LSP查找定义失败: %v", err),
+			Error: fmt.Sprintf("LSP find definition failed: %v", err),
 		}, nil
 	}
 
-	// 检查响应是否包含错误
+	// Check response for errors
 	if response.Error != "" {
 		m.metrics.incrementFailedRequests()
 	} else {
 		m.metrics.incrementSuccessfulRequests()
 	}
 
-	// 更新响应时间指标
+	// Update response time metrics
 	responseTime := time.Since(startTime)
 	m.metrics.updateAverageResponseTime(responseTime)
 
 	return response, nil
 }
 
-// validateFindDefinitionRequest 验证查找定义请求
+// validateFindDefinitionRequest validates a find definition request
 func (m *Manager) validateFindDefinitionRequest(req *types.FindDefinitionRequest) error {
 	if req == nil {
-		return fmt.Errorf("请求不能为空")
+		return fmt.Errorf("request cannot be nil")
 	}
 
 	if req.LanguageID == "" {
-		return fmt.Errorf("语言ID不能为空")
+		return fmt.Errorf("language ID cannot be empty")
 	}
 
 	if req.RootURI == "" {
-		return fmt.Errorf("根URI不能为空")
+		return fmt.Errorf("root URI cannot be empty")
 	}
 
 	if req.FileURI == "" {
-		return fmt.Errorf("文件URI不能为空")
+		return fmt.Errorf("file URI cannot be empty")
 	}
 
 	if req.Position.Line < 0 {
-		return fmt.Errorf("行号不能为负数")
+		return fmt.Errorf("line number cannot be negative")
 	}
 
 	if req.Position.Character < 0 {
-		return fmt.Errorf("字符位置不能为负数")
+		return fmt.Errorf("character position cannot be negative")
 	}
 
-	// 检查是否支持该语言
+	// Check if the language is supported
 	if _, exists := m.config.GetLSPServerConfig(req.LanguageID); !exists {
-		return fmt.Errorf("不支持的语言: %s", req.LanguageID)
+		return fmt.Errorf("unsupported language: %s", req.LanguageID)
 	}
 
 	return nil
 }
 
-// validateFindReferencesRequest 验证查找引用请求的参数
+// validateFindReferencesRequest validates a find references request
 func (m *Manager) validateFindReferencesRequest(req *types.FindReferencesRequest) error {
 	if req == nil {
-		return fmt.Errorf("请求不能为空")
+		return fmt.Errorf("request cannot be nil")
 	}
 
 	if req.LanguageID == "" {
-		return fmt.Errorf("语言ID不能为空")
+		return fmt.Errorf("language ID cannot be empty")
 	}
 
 	if req.FileURI == "" {
-		return fmt.Errorf("文件URI不能为空")
+		return fmt.Errorf("file URI cannot be empty")
 	}
 
 	if req.Position.Line < 0 {
-		return fmt.Errorf("行号不能为负数")
+		return fmt.Errorf("line number cannot be negative")
 	}
 
 	if req.Position.Character < 0 {
-		return fmt.Errorf("字符位置不能为负数")
+		return fmt.Errorf("character position cannot be negative")
 	}
 
-	// 检查是否支持该语言
+	// Check if the language is supported
 	if _, exists := m.config.GetLSPServerConfig(req.LanguageID); !exists {
-		return fmt.Errorf("不支持的语言: %s", req.LanguageID)
+		return fmt.Errorf("unsupported language: %s", req.LanguageID)
 	}
 
 	return nil
 }
 
-// validateHoverRequest 验证悬停请求的参数
+// validateHoverRequest validates a hover request
 func (m *Manager) validateHoverRequest(req *types.HoverRequest) error {
 	if req == nil {
-		return fmt.Errorf("请求不能为空")
+		return fmt.Errorf("request cannot be nil")
 	}
 
 	if req.LanguageID == "" {
-		return fmt.Errorf("语言ID不能为空")
+		return fmt.Errorf("language ID cannot be empty")
 	}
 
 	if req.FileURI == "" {
-		return fmt.Errorf("文件URI不能为空")
+		return fmt.Errorf("file URI cannot be empty")
 	}
 
 	if req.Position.Line < 0 {
-		return fmt.Errorf("行号不能为负数")
+		return fmt.Errorf("line number cannot be negative")
 	}
 
 	if req.Position.Character < 0 {
-		return fmt.Errorf("字符位置不能为负数")
+		return fmt.Errorf("character position cannot be negative")
 	}
 
-	// 检查是否支持该语言
+	// Check if the language is supported
 	if _, exists := m.config.GetLSPServerConfig(req.LanguageID); !exists {
-		return fmt.Errorf("不支持的语言: %s", req.LanguageID)
+		return fmt.Errorf("unsupported language: %s", req.LanguageID)
 	}
 
 	return nil
 }
 
-// validateCompletionRequest 验证代码补全请求的参数
+// validateCompletionRequest validates a completion request
 func (m *Manager) validateCompletionRequest(req *types.CompletionRequest) error {
 	if req == nil {
-		return fmt.Errorf("请求不能为空")
+		return fmt.Errorf("request cannot be nil")
 	}
 
 	if req.LanguageID == "" {
-		return fmt.Errorf("语言ID不能为空")
+		return fmt.Errorf("language ID cannot be empty")
 	}
 
 	if req.FileURI == "" {
-		return fmt.Errorf("文件URI不能为空")
+		return fmt.Errorf("file URI cannot be empty")
 	}
 
 	if req.Position.Line < 0 {
-		return fmt.Errorf("行号不能为负数")
+		return fmt.Errorf("line number cannot be negative")
 	}
 
 	if req.Position.Character < 0 {
-		return fmt.Errorf("字符位置不能为负数")
+		return fmt.Errorf("character position cannot be negative")
 	}
 
-	// 检查是否支持该语言
+	// Check if the language is supported
 	if _, exists := m.config.GetLSPServerConfig(req.LanguageID); !exists {
-		return fmt.Errorf("不支持的语言: %s", req.LanguageID)
+		return fmt.Errorf("unsupported language: %s", req.LanguageID)
 	}
 
 	return nil
 }
 
-// GetSessionInfo 获取会话信息
+// GetSessionInfo returns session info
 func (m *Manager) GetSessionInfo() map[string]interface{} {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -251,17 +243,17 @@ func (m *Manager) GetSessionInfo() map[string]interface{} {
 	return info
 }
 
-// GetMetrics 获取指标信息
+// GetMetrics returns metrics info
 func (m *Manager) GetMetrics() *SessionMetrics {
 	return m.metrics
 }
 
-// Shutdown 关闭会话管理器
+// Shutdown shuts down the session manager
 func (m *Manager) Shutdown(ctx context.Context) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	// 取消上下文
+	// Cancel context
 	if m.cancel != nil {
 		m.cancel()
 	}
@@ -269,7 +261,7 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// Close 关闭会话管理器
+// Close closes the session manager
 func (m *Manager) Close() error {
 	m.cancel()
 
@@ -280,118 +272,118 @@ func (m *Manager) Close() error {
 	return nil
 }
 
-// FindReferences 查找引用
+// FindReferences finds references
 func (m *Manager) FindReferences(ctx context.Context, req *types.FindReferencesRequest) (*types.FindReferencesResponse, error) {
 	startTime := time.Now()
 	m.metrics.incrementTotalRequests()
 	m.metrics.updateLastRequestTime(startTime)
 
-	// 验证请求参数
+	// Validate request parameters
 	if err := m.validateFindReferencesRequest(req); err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.FindReferencesResponse{
-			Error: fmt.Sprintf("请求参数验证失败: %v", err),
+			Error: fmt.Sprintf("request parameter validation failed: %v", err),
 		}, nil
 	}
 
-	// 调用LSP客户端查找引用
+	// Call LSP client to find references
 	response, err := m.lspClient.FindReferences(ctx, req)
 	if err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.FindReferencesResponse{
-			Error: fmt.Sprintf("LSP查找引用失败: %v", err),
+			Error: fmt.Sprintf("LSP find references failed: %v", err),
 		}, nil
 	}
 
-	// 检查响应是否包含错误
+	// Check response for errors
 	if response.Error != "" {
 		m.metrics.incrementFailedRequests()
 	} else {
 		m.metrics.incrementSuccessfulRequests()
 	}
 
-	// 更新响应时间指标
+	// Update response time metrics
 	responseTime := time.Since(startTime)
 	m.metrics.updateAverageResponseTime(responseTime)
 
 	return response, nil
 }
 
-// GetHover 获取悬停信息
+// GetHover fetches hover info
 func (m *Manager) GetHover(ctx context.Context, req *types.HoverRequest) (*types.HoverResponse, error) {
 	startTime := time.Now()
 	m.metrics.incrementTotalRequests()
 	m.metrics.updateLastRequestTime(startTime)
 
-	// 验证请求参数
+	// Validate request parameters
 	if err := m.validateHoverRequest(req); err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.HoverResponse{
-			Error: fmt.Sprintf("请求参数验证失败: %v", err),
+			Error: fmt.Sprintf("request parameter validation failed: %v", err),
 		}, nil
 	}
 
-	// 调用LSP客户端获取悬停信息
+	// Call LSP client to get hover info
 	response, err := m.lspClient.GetHover(ctx, req)
 	if err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.HoverResponse{
-			Error: fmt.Sprintf("LSP获取悬停信息失败: %v", err),
+			Error: fmt.Sprintf("LSP hover request failed: %v", err),
 		}, nil
 	}
 
-	// 检查响应是否包含错误
+	// Check response for errors
 	if response.Error != "" {
 		m.metrics.incrementFailedRequests()
 	} else {
 		m.metrics.incrementSuccessfulRequests()
 	}
 
-	// 更新响应时间指标
+	// Update response time metrics
 	responseTime := time.Since(startTime)
 	m.metrics.updateAverageResponseTime(responseTime)
 
 	return response, nil
 }
 
-// GetCompletion 获取代码补全
+// GetCompletion fetches code completions
 func (m *Manager) GetCompletion(ctx context.Context, req *types.CompletionRequest) (*types.CompletionResponse, error) {
 	startTime := time.Now()
 	m.metrics.incrementTotalRequests()
 	m.metrics.updateLastRequestTime(startTime)
 
-	// 验证请求参数
+	// Validate request parameters
 	if err := m.validateCompletionRequest(req); err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.CompletionResponse{
-			Error: fmt.Sprintf("请求参数验证失败: %v", err),
+			Error: fmt.Sprintf("request parameter validation failed: %v", err),
 		}, nil
 	}
 
-	// 调用LSP客户端获取代码补全
+	// Call LSP client to get completions
 	response, err := m.lspClient.GetCompletion(ctx, req)
 	if err != nil {
 		m.metrics.incrementFailedRequests()
 		return &types.CompletionResponse{
-			Error: fmt.Sprintf("LSP获取代码补全失败: %v", err),
+			Error: fmt.Sprintf("LSP completion request failed: %v", err),
 		}, nil
 	}
 
-	// 检查响应是否包含错误
+	// Check response for errors
 	if response.Error != "" {
 		m.metrics.incrementFailedRequests()
 	} else {
 		m.metrics.incrementSuccessfulRequests()
 	}
 
-	// 更新响应时间指标
+	// Update response time metrics
 	responseTime := time.Since(startTime)
 	m.metrics.updateAverageResponseTime(responseTime)
 
 	return response, nil
 }
 
-// GetSupportedLanguages 获取支持的语言列表
+// GetSupportedLanguages returns supported languages
 func (m *Manager) GetSupportedLanguages() []string {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -404,7 +396,7 @@ func (m *Manager) GetSupportedLanguages() []string {
 	return languages
 }
 
-// GetLSPServerConfig 获取LSP服务器配置
+// GetLSPServerConfig returns the LSP server config
 func (m *Manager) GetLSPServerConfig(languageID string) (*config.LSPServerConfig, bool) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -412,66 +404,66 @@ func (m *Manager) GetLSPServerConfig(languageID string) (*config.LSPServerConfig
 	return m.config.GetLSPServerConfig(languageID)
 }
 
-// SessionMetrics 方法
+// SessionMetrics methods
 
-// incrementTotalRequests 增加总请求数
+// incrementTotalRequests increments total requests
 func (sm *SessionMetrics) incrementTotalRequests() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	sm.TotalRequests++
 }
 
-// incrementSuccessfulRequests 增加成功请求数
+// incrementSuccessfulRequests increments successful requests
 func (sm *SessionMetrics) incrementSuccessfulRequests() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	sm.SuccessfulRequests++
 }
 
-// incrementFailedRequests 增加失败请求数
+// incrementFailedRequests increments failed requests
 func (sm *SessionMetrics) incrementFailedRequests() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	sm.FailedRequests++
 }
 
-// updateAverageResponseTime 更新平均响应时间
+// updateAverageResponseTime updates average response time
 func (sm *SessionMetrics) updateAverageResponseTime(responseTime time.Duration) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
-	// 使用简单的移动平均算法
+	// Simple moving average
 	responseTimeMs := float64(responseTime.Nanoseconds()) / 1e6
 	if sm.AverageResponseTime == 0 {
 		sm.AverageResponseTime = responseTimeMs
 	} else {
-		// 使用指数移动平均，权重为0.1
+		// Exponential moving average with weight 0.1
 		sm.AverageResponseTime = sm.AverageResponseTime*0.9 + responseTimeMs*0.1
 	}
 }
 
-// updateLastRequestTime 更新最后请求时间
+// updateLastRequestTime updates last request time
 func (sm *SessionMetrics) updateLastRequestTime(t time.Time) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	sm.LastRequestTime = t
 }
 
-// incrementSessionsCreated 增加创建的会话数
+// incrementSessionsCreated increments sessions created
 func (sm *SessionMetrics) incrementSessionsCreated() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	sm.SessionsCreated++
 }
 
-// incrementSessionsClosed 增加关闭的会话数
+// incrementSessionsClosed increments sessions closed
 func (sm *SessionMetrics) incrementSessionsClosed() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	sm.SessionsClosed++
 }
 
-// getMetrics 获取指标信息（线程安全）
+// getMetrics returns metrics (thread-safe)
 func (sm *SessionMetrics) getMetrics() map[string]interface{} {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
@@ -488,7 +480,7 @@ func (sm *SessionMetrics) getMetrics() map[string]interface{} {
 	}
 }
 
-// getSuccessRate 获取成功率
+// getSuccessRate returns success rate
 func (sm *SessionMetrics) getSuccessRate() float64 {
 	if sm.TotalRequests == 0 {
 		return 0.0
@@ -496,7 +488,7 @@ func (sm *SessionMetrics) getSuccessRate() float64 {
 	return float64(sm.SuccessfulRequests) / float64(sm.TotalRequests) * 100.0
 }
 
-// Reset 重置指标
+// Reset resets metrics
 func (sm *SessionMetrics) Reset() {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()

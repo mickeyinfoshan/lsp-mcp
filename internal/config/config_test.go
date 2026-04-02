@@ -7,7 +7,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	// 创建临时配置文件
+	// Create a temporary config file
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
@@ -39,67 +39,67 @@ session:
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
-		t.Fatalf("创建测试配置文件失败: %v", err)
+		t.Fatalf("failed to create test config file: %v", err)
 	}
 
-	// 测试加载配置
+	// Load config
 	cfg, err := LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("加载配置失败: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
-	// 验证配置内容
+	// Validate config contents
 	if cfg.MCPServer.Name != "test-lsp-bridge" {
-		t.Errorf("期望 MCP 服务器名称为 'test-lsp-bridge'，实际为 '%s'", cfg.MCPServer.Name)
+		t.Errorf("expected MCP server name to be 'test-lsp-bridge', got '%s'", cfg.MCPServer.Name)
 	}
 
 	if cfg.MCPServer.Version != "1.0.0" {
-		t.Errorf("期望 MCP 服务器版本为 '1.0.0'，实际为 '%s'", cfg.MCPServer.Version)
+		t.Errorf("expected MCP server version to be '1.0.0', got '%s'", cfg.MCPServer.Version)
 	}
 
 	if len(cfg.LSPServers) != 2 {
-		t.Errorf("期望 2 个 LSP 服务器，实际为 %d", len(cfg.LSPServers))
+		t.Errorf("expected 2 LSP servers, got %d", len(cfg.LSPServers))
 	}
 
-	// 验证 Go LSP 服务器配置
+	// Validate Go LSP server config
 	goConfig, exists := cfg.LSPServers["go"]
 	if !exists {
-		t.Error("Go LSP 服务器配置不存在")
+		t.Error("Go LSP server config missing")
 	}
 	if goConfig.Command != "gopls" {
-		t.Errorf("期望 Go LSP 命令为 'gopls'，实际为 '%s'", goConfig.Command)
+		t.Errorf("expected Go LSP command to be 'gopls', got '%s'", goConfig.Command)
 	}
 
-	// 验证 TypeScript LSP 服务器配置
+	// Validate TypeScript LSP server config
 	tsConfig, exists := cfg.LSPServers["typescript"]
 	if !exists {
-		t.Error("TypeScript LSP 服务器配置不存在")
+		t.Error("TypeScript LSP server config missing")
 	}
 	if tsConfig.Command != "typescript-language-server" {
-		t.Errorf("期望 TypeScript LSP 命令为 'typescript-language-server'，实际为 '%s'", tsConfig.Command)
+		t.Errorf("expected TypeScript LSP command to be 'typescript-language-server', got '%s'", tsConfig.Command)
 	}
 	if len(tsConfig.Args) != 1 || tsConfig.Args[0] != "--stdio" {
-		t.Errorf("期望 TypeScript LSP 参数为 ['--stdio']，实际为 %v", tsConfig.Args)
+		t.Errorf("expected TypeScript LSP args to be ['--stdio'], got %v", tsConfig.Args)
 	}
 
-	// 验证日志配置
+	// Validate logging config
 	if cfg.Logging.Level != "info" {
-		t.Errorf("期望日志级别为 'info'，实际为 '%s'", cfg.Logging.Level)
+		t.Errorf("expected log level 'info', got '%s'", cfg.Logging.Level)
 	}
 	if cfg.Logging.Format != "text" {
-		t.Errorf("期望日志格式为 'text'，实际为 '%s'", cfg.Logging.Format)
+		t.Errorf("expected log format 'text', got '%s'", cfg.Logging.Format)
 	}
 	if cfg.Logging.FileOutput != false {
-		t.Errorf("期望文件输出为 false，实际为 %v", cfg.Logging.FileOutput)
+		t.Errorf("expected file output false, got %v", cfg.Logging.FileOutput)
 	}
 
-	// 验证会话配置
+	// Validate session config
 	if cfg.Session.MaxSessions != 3 {
-		t.Errorf("期望最大会话数为 3，实际为 %d", cfg.Session.MaxSessions)
+		t.Errorf("expected max sessions 3, got %d", cfg.Session.MaxSessions)
 	}
 }
 
-// TestGetLSPServerConfig 测试获取LSP服务器配置
+// TestGetLSPServerConfig tests fetching LSP server config
 func TestGetLSPServerConfig(t *testing.T) {
 	config := &Config{
 		LSPServers: map[string]*LSPServerConfig{
@@ -117,40 +117,40 @@ func TestGetLSPServerConfig(t *testing.T) {
 		},
 	}
 
-	// 测试存在的语言ID
+	// Test an existing language ID
 	goConfig, exists := config.GetLSPServerConfig("go")
 	if !exists {
-		t.Error("期望找到Go LSP服务器配置")
+		t.Error("expected to find Go LSP server config")
 	}
 	if goConfig.Command != "gopls" {
-		t.Errorf("期望Go LSP命令为 'gopls'，实际为 '%s'", goConfig.Command)
+		t.Errorf("expected Go LSP command to be 'gopls', got '%s'", goConfig.Command)
 	}
 	if len(goConfig.Args) != 1 || goConfig.Args[0] != "serve" {
-		t.Errorf("期望Go LSP参数为 ['serve']，实际为 %v", goConfig.Args)
+		t.Errorf("expected Go LSP args to be ['serve'], got %v", goConfig.Args)
 	}
 	if goConfig.InitializationOptions["usePlaceholders"] != true {
-		t.Error("期望Go LSP初始化选项包含 usePlaceholders: true")
+		t.Error("expected Go LSP initialization options to include usePlaceholders: true")
 	}
 
-	// 测试不存在的语言ID
+	// Test a nonexistent language ID
 	_, exists = config.GetLSPServerConfig("nonexistent")
 	if exists {
-		t.Error("期望不存在的语言ID返回false")
+		t.Error("expected nonexistent language ID to return false")
 	}
 }
 
-// TestLoadConfigFromDefault 测试从默认路径加载配置
+// TestLoadConfigFromDefault tests loading config from the default path
 func TestLoadConfigFromDefault(t *testing.T) {
-	// 由于LoadConfigFromDefault依赖于当前工作目录和文件系统，
-	// 这里主要测试函数调用不会panic
+	// LoadConfigFromDefault depends on current working directory and filesystem,
+	// so we mainly ensure the function call does not panic.
 	_, err := LoadConfigFromDefault()
-	// 期望返回错误，因为默认配置文件可能不存在
+	// Expect an error because the default config may not exist
 	if err == nil {
-		t.Log("警告: 默认配置文件存在，这可能不是期望的测试环境")
+		t.Log("warning: default config file exists; this may not be the expected test environment")
 	}
 }
 
-// TestValidateConfigEdgeCases 测试配置验证的边界情况
+// TestValidateConfigEdgeCases tests edge cases for config validation
 func TestValidateConfigEdgeCases(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -159,7 +159,7 @@ func TestValidateConfigEdgeCases(t *testing.T) {
 		errorMsg    string
 	}{
 		{
-			name: "空语言ID",
+			name: "empty language ID",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"": {
@@ -179,10 +179,10 @@ func TestValidateConfigEdgeCases(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "语言ID不能为空",
+			errorMsg:    "language ID cannot be empty",
 		},
 		{
-			name: "无效日志级别",
+			name: "invalid log level",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"go": {
@@ -202,10 +202,10 @@ func TestValidateConfigEdgeCases(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "无效的日志级别",
+			errorMsg:    "invalid log level",
 		},
 		{
-			name: "无效日志格式",
+			name: "invalid log format",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"go": {
@@ -225,10 +225,10 @@ func TestValidateConfigEdgeCases(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "无效的日志格式",
+			errorMsg:    "invalid log format",
 		},
 		{
-			name: "最大会话数无效",
+			name: "invalid max sessions",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"go": {
@@ -244,11 +244,11 @@ func TestValidateConfigEdgeCases(t *testing.T) {
 					Format: "text",
 				},
 				Session: &SessionConfig{
-					MaxSessions: -1, // 无效值
+					MaxSessions: -1, // Invalid value
 				},
 			},
 			expectError: true,
-			errorMsg:    "最大会话数必须大于0",
+			errorMsg:    "max sessions must be greater than 0",
 		},
 	}
 
@@ -257,20 +257,20 @@ func TestValidateConfigEdgeCases(t *testing.T) {
 			err := tt.config.Validate()
 			if tt.expectError {
 				if err == nil {
-					t.Error("期望返回错误，但没有错误")
+					t.Error("expected error, got nil")
 				} else if tt.errorMsg != "" && !contains(err.Error(), tt.errorMsg) {
-					t.Errorf("期望错误消息包含 '%s'，实际错误: %v", tt.errorMsg, err)
+					t.Errorf("expected error message to contain '%s', got: %v", tt.errorMsg, err)
 				}
 			} else {
 				if err != nil {
-					t.Errorf("不期望返回错误，但得到错误: %v", err)
+					t.Errorf("did not expect error, got: %v", err)
 				}
 			}
 		})
 	}
 }
 
-// TestConfigWithInitializationOptions 测试带有初始化选项的配置
+// TestConfigWithInitializationOptions tests config with initialization options
 func TestConfigWithInitializationOptions(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "init_options_config.yaml")
@@ -309,50 +309,50 @@ session:
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
-		t.Fatalf("创建配置文件失败: %v", err)
+		t.Fatalf("failed to create config file: %v", err)
 	}
 
 	cfg, err := LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("加载配置失败: %v", err)
+		t.Fatalf("failed to load config: %v", err)
 	}
 
-	// 验证Go LSP服务器的初始化选项
+	// Validate Go LSP initialization options
 	goConfig, exists := cfg.GetLSPServerConfig("go")
 	if !exists {
-		t.Fatal("Go LSP服务器配置不存在")
+		t.Fatal("Go LSP server config missing")
 	}
 
 	if goConfig.InitializationOptions["usePlaceholders"] != true {
-		t.Error("期望Go LSP初始化选项包含 usePlaceholders: true")
+		t.Error("expected Go LSP initialization options to include usePlaceholders: true")
 	}
 	if goConfig.InitializationOptions["completionDocumentation"] != true {
-		t.Error("期望Go LSP初始化选项包含 completionDocumentation: true")
+		t.Error("expected Go LSP initialization options to include completionDocumentation: true")
 	}
 	if goConfig.InitializationOptions["deepCompletion"] != true {
-		t.Error("期望Go LSP初始化选项包含 deepCompletion: true")
+		t.Error("expected Go LSP initialization options to include deepCompletion: true")
 	}
 
-	// 验证TypeScript LSP服务器的初始化选项
+	// Validate TypeScript LSP initialization options
 	tsConfig, exists := cfg.GetLSPServerConfig("typescript")
 	if !exists {
-		t.Fatal("TypeScript LSP服务器配置不存在")
+		t.Fatal("TypeScript LSP server config missing")
 	}
 
 	preferences, ok := tsConfig.InitializationOptions["preferences"].(map[string]interface{})
 	if !ok {
-		t.Fatal("期望TypeScript LSP初始化选项包含preferences对象")
+		t.Fatal("expected TypeScript initialization options to include preferences object")
 	}
 
 	if preferences["disableSuggestions"] != false {
-		t.Error("期望TypeScript preferences包含 disableSuggestions: false")
+		t.Error("expected TypeScript preferences to include disableSuggestions: false")
 	}
 	if preferences["quotePreference"] != "double" {
-		t.Error("期望TypeScript preferences包含 quotePreference: 'double'")
+		t.Error("expected TypeScript preferences to include quotePreference: 'double'")
 	}
 }
 
-// contains 检查字符串是否包含子字符串
+// contains checks whether a string contains a substring
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > len(substr) && func() bool {
@@ -366,15 +366,15 @@ func contains(s, substr string) bool {
 }
 
 func TestLoadConfigFileNotFound(t *testing.T) {
-	// 测试文件不存在的情况
+	// Test file not found
 	_, err := LoadConfig("/nonexistent/config.yaml")
 	if err == nil {
-		t.Error("期望加载不存在的配置文件时返回错误")
+		t.Error("expected an error when loading a nonexistent config file")
 	}
 }
 
 func TestLoadConfigInvalidYAML(t *testing.T) {
-	// 创建无效的 YAML 文件
+	// Create an invalid YAML file
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "invalid_config.yaml")
 
@@ -383,18 +383,18 @@ lsp_servers:
   go:
     command: "gopls"
     args: [
-    # 无效的 YAML - 未闭合的数组
+    # Invalid YAML - unclosed array
 `
 
 	err := os.WriteFile(configPath, []byte(invalidContent), 0644)
 	if err != nil {
-		t.Fatalf("创建无效配置文件失败: %v", err)
+		t.Fatalf("failed to create invalid config file: %v", err)
 	}
 
-	// 测试加载无效配置
+	// Test loading invalid config
 	_, err = LoadConfig(configPath)
 	if err == nil {
-		t.Error("期望加载无效 YAML 配置文件时返回错误")
+		t.Error("expected an error when loading invalid YAML config")
 	}
 }
 
@@ -405,7 +405,7 @@ func TestValidateConfig(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "有效配置",
+			name: "valid config",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"go": {
@@ -430,7 +430,7 @@ func TestValidateConfig(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "缺少 LSP 服务器",
+			name: "missing LSP servers",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{},
 				MCPServer: &MCPServerConfig{
@@ -442,7 +442,7 @@ func TestValidateConfig(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "LSP 服务器命令为空",
+			name: "LSP server command is empty",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"go": {
@@ -459,7 +459,7 @@ func TestValidateConfig(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "MCP 服务器名称为空",
+			name: "MCP server name is empty",
 			config: &Config{
 				LSPServers: map[string]*LSPServerConfig{
 					"go": {
@@ -481,21 +481,21 @@ func TestValidateConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
 			if tt.expectError && err == nil {
-				t.Error("期望返回错误，但没有错误")
+				t.Error("expected error, got nil")
 			}
 			if !tt.expectError && err != nil {
-				t.Errorf("不期望返回错误，但得到错误: %v", err)
+				t.Errorf("did not expect error, got: %v", err)
 			}
 		})
 	}
 }
 
 func TestConfigDefaults(t *testing.T) {
-	// 测试完整配置加载
+	// Test loading a complete config
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "complete_config.yaml")
 
-	// 完整配置
+	// Complete config
 	completeContent := `
 lsp_servers:
   go:
@@ -520,28 +520,28 @@ session:
 
 	err := os.WriteFile(configPath, []byte(completeContent), 0644)
 	if err != nil {
-		t.Fatalf("创建完整配置文件失败: %v", err)
+		t.Fatalf("failed to create complete config file: %v", err)
 	}
 
 	cfg, err := LoadConfig(configPath)
 	if err != nil {
-		t.Fatalf("加载完整配置失败: %v", err)
+		t.Fatalf("failed to load complete config: %v", err)
 	}
 
-	// 验证配置值
+	// Validate config values
 	if cfg.Logging.Level != "debug" {
-		t.Errorf("期望日志级别为 'debug'，实际为 '%s'", cfg.Logging.Level)
+		t.Errorf("expected log level 'debug', got '%s'", cfg.Logging.Level)
 	}
 	if cfg.Logging.Format != "json" {
-		t.Errorf("期望日志格式为 'json'，实际为 '%s'", cfg.Logging.Format)
+		t.Errorf("expected log format 'json', got '%s'", cfg.Logging.Format)
 	}
 	if cfg.Logging.FileOutput != true {
-		t.Errorf("期望文件输出为 true，实际为 %v", cfg.Logging.FileOutput)
+		t.Errorf("expected file output true, got %v", cfg.Logging.FileOutput)
 	}
 	if cfg.Logging.FilePath != "/tmp/test.log" {
-		t.Errorf("期望日志文件路径为 '/tmp/test.log'，实际为 '%s'", cfg.Logging.FilePath)
+		t.Errorf("expected log file path '/tmp/test.log', got '%s'", cfg.Logging.FilePath)
 	}
 	if cfg.Session.MaxSessions != 10 {
-		t.Errorf("期望最大会话数为 10，实际为 %d", cfg.Session.MaxSessions)
+		t.Errorf("expected max sessions 10, got %d", cfg.Session.MaxSessions)
 	}
 }
