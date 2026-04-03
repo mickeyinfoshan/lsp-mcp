@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -21,6 +20,7 @@ import (
 	"html"
 
 	"github.com/mickeyinfoshan/lsp-mcp/internal/config"
+	"github.com/mickeyinfoshan/lsp-mcp/internal/logger"
 	"github.com/mickeyinfoshan/lsp-mcp/pkg/types"
 	protocol "go.lsp.dev/protocol"
 )
@@ -159,43 +159,43 @@ func NewLSPConnection(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser,
 
 	// Register workspace/configuration handler, return empty config array
 	conn.RegisterServerRequestHandler("workspace/configuration", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] workspace/configuration called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] workspace/configuration called, params: %s", string(params))
 		return []interface{}{}, nil
 	})
 
 	// Register window/workDoneProgress/create handler, return empty response
 	conn.RegisterServerRequestHandler("window/workDoneProgress/create", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] window/workDoneProgress/create called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] window/workDoneProgress/create called, params: %s", string(params))
 		return nil, nil
 	})
 
 	// Register workspace/didChangeConfiguration handler, return empty response
 	conn.RegisterServerRequestHandler("workspace/didChangeConfiguration", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] workspace/didChangeConfiguration called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] workspace/didChangeConfiguration called, params: %s", string(params))
 		return nil, nil
 	})
 
 	// Register workspace/didChangeWorkspaceFolders handler, return empty response
 	conn.RegisterServerRequestHandler("workspace/didChangeWorkspaceFolders", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] workspace/didChangeWorkspaceFolders called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] workspace/didChangeWorkspaceFolders called, params: %s", string(params))
 		return nil, nil
 	})
 
 	// Register client/registerCapability handler, return empty response
 	conn.RegisterServerRequestHandler("client/registerCapability", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] client/registerCapability called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] client/registerCapability called, params: %s", string(params))
 		return nil, nil
 	})
 
 	// Register client/unregisterCapability handler, return empty response
 	conn.RegisterServerRequestHandler("client/unregisterCapability", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] client/unregisterCapability called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] client/unregisterCapability called, params: %s", string(params))
 		return nil, nil
 	})
 
 	// Register window/showMessageRequest handler, return first action or nil
 	conn.RegisterServerRequestHandler("window/showMessageRequest", func(params json.RawMessage) (any, error) {
-		log.Printf("[LSP-PROTO] window/showMessageRequest called, params: %s", string(params))
+		logger.Infof("[LSP-PROTO] window/showMessageRequest called, params: %s", string(params))
 		// Default to the first action
 		var req struct {
 			Actions []struct {
@@ -211,20 +211,20 @@ func NewLSPConnection(cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser,
 
 	// Register common notification handlers
 	conn.RegisterNotificationHandler("$/progress", func(params json.RawMessage) {
-		log.Printf("[LSP-NOTIFY] $/progress: %s", string(params))
+		logger.Infof("[LSP-NOTIFY] $/progress: %s", string(params))
 	})
 	conn.RegisterNotificationHandler("window/logMessage", func(params json.RawMessage) {
-		log.Printf("[LSP-NOTIFY] window/logMessage: %s", string(params))
+		logger.Infof("[LSP-NOTIFY] window/logMessage: %s", string(params))
 	})
 	conn.RegisterNotificationHandler("textDocument/publishDiagnostics", func(params json.RawMessage) {
-		log.Printf("[LSP-NOTIFY] textDocument/publishDiagnostics: %s", string(params))
+		logger.Infof("[LSP-NOTIFY] textDocument/publishDiagnostics: %s", string(params))
 	})
 
 	// Pipe stderr logs, consistent with test script
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			log.Printf("[STDERR] %s", scanner.Text())
+			logger.Infof("[STDERR] %s", scanner.Text())
 		}
 	}()
 
@@ -240,7 +240,7 @@ func (conn *LSPConnection) ReadMessage() (*Message, error) {
 	var contentLength int
 	for {
 		line, err := conn.stdout.ReadString('\n')
-		log.Printf("[LSP-IO] Read header line: %q, err: %v", line, err)
+		logger.Infof("[LSP-IO] Read header line: %q, err: %v", line, err)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read header: %w", err)
 		}
@@ -262,17 +262,17 @@ func (conn *LSPConnection) ReadMessage() (*Message, error) {
 	// Read content
 	content := make([]byte, contentLength)
 	readN, err := io.ReadFull(conn.stdout, content)
-	log.Printf("[LSP-IO] Read content bytes: %d, err: %v", readN, err)
+	logger.Infof("[LSP-IO] Read content bytes: %d, err: %v", readN, err)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 	// Parse JSON
 	var msg Message
 	if err := json.Unmarshal(content, &msg); err != nil {
-		log.Printf("[LSP-IO] Unmarshal message error: %v", err)
+		logger.Infof("[LSP-IO] Unmarshal message error: %v", err)
 		return nil, fmt.Errorf("failed to parse message: %w", err)
 	}
-	log.Printf("[LSP-IO] Read message: %s", string(content))
+	logger.Infof("[LSP-IO] Read message: %s", string(content))
 	return &msg, nil
 }
 
@@ -283,9 +283,9 @@ func (conn *LSPConnection) handleMessages() {
 		if err != nil {
 			// Check if this is due to normal shutdown (EOF when closing connection)
 			if strings.Contains(err.Error(), "EOF") {
-				log.Printf("[DEBUG] LSP connection closed (EOF)")
+				logger.Debugf("[DEBUG] LSP connection closed (EOF)")
 			} else {
-				log.Printf("[DEBUG] Error reading message: %v", err)
+				logger.Debugf("[DEBUG] Error reading message: %v", err)
 			}
 			// Clean up all pending handlers
 			conn.handlersMu.Lock()
@@ -328,11 +328,11 @@ func (conn *LSPConnection) handleResponse(msg *Message) {
 	conn.handlersMu.RUnlock()
 
 	if !exists {
-		log.Printf("[DEBUG] Received response for unknown request ID: %s", idStr)
+		logger.Debugf("[DEBUG] Received response for unknown request ID: %s", idStr)
 		return
 	}
 
-	log.Printf("[DEBUG] Sending response for ID %v to handler", msg.ID)
+	logger.Debugf("[DEBUG] Sending response for ID %v to handler", msg.ID)
 	ch <- msg
 	close(ch)
 }
@@ -346,7 +346,7 @@ func (conn *LSPConnection) handleNotification(msg *Message) {
 	if exists {
 		go handler(msg.Params)
 	} else {
-		log.Printf("[DEBUG] Unhandled notification: %s", msg.Method)
+		logger.Debugf("[DEBUG] Unhandled notification: %s", msg.Method)
 	}
 }
 
@@ -400,7 +400,7 @@ func (conn *LSPConnection) sendMessage(msg *Message) error {
 	// Serialize message
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
-		log.Printf("[LSP-IO] Marshal message error: %v", err)
+		logger.Infof("[LSP-IO] Marshal message error: %v", err)
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
@@ -408,10 +408,10 @@ func (conn *LSPConnection) sendMessage(msg *Message) error {
 	header := fmt.Sprintf("Content-Length: %d\r\n\r\n", len(msgBytes))
 	fullMessage := header + string(msgBytes)
 
-	log.Printf("[LSP-IO] Write message: %s", string(msgBytes))
+	logger.Infof("[LSP-IO] Write message: %s", string(msgBytes))
 	// Send message
 	written, err := conn.stdin.Write([]byte(fullMessage))
-	log.Printf("[LSP-IO] Write bytes: %d, err: %v", written, err)
+	logger.Infof("[LSP-IO] Write bytes: %d, err: %v", written, err)
 	if err != nil {
 		return fmt.Errorf("failed to write message: %w", err)
 	}
@@ -419,7 +419,7 @@ func (conn *LSPConnection) sendMessage(msg *Message) error {
 	// Flush stdin if supported
 	if flusher, ok := conn.stdin.(interface{ Flush() error }); ok {
 		err := flusher.Flush()
-		log.Printf("[LSP-IO] Flush stdin: %v", err)
+		logger.Infof("[LSP-IO] Flush stdin: %v", err)
 	}
 
 	return nil
@@ -431,7 +431,7 @@ func (conn *LSPConnection) Call(ctx context.Context, method string, params any) 
 	id := conn.nextID.Add(1)
 	msgID := &MessageID{Value: id}
 
-	log.Printf("[DEBUG] Making call: method=%s id=%v", method, id)
+	logger.Debugf("[DEBUG] Making call: method=%s id=%v", method, id)
 
 	// Create response channel
 	respCh := make(chan *Message, 1)
@@ -472,17 +472,17 @@ func (conn *LSPConnection) Call(ctx context.Context, method string, params any) 
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
-	log.Printf("[DEBUG] Waiting for response to request ID: %v", msgID)
+	logger.Debugf("[DEBUG] Waiting for response to request ID: %v", msgID)
 
 	// Wait for response
 	select {
 	case resp := <-respCh:
-		log.Printf("[DEBUG] Received response for request ID: %v", msgID)
+		logger.Debugf("[DEBUG] Received response for request ID: %v", msgID)
 		if resp == nil {
 			return nil, fmt.Errorf("received nil response")
 		}
 		if resp.Error != nil {
-			log.Printf("[ERROR] Request failed: %s (code: %d)", resp.Error.Message, resp.Error.Code)
+			logger.Errorf("[ERROR] Request failed: %s (code: %d)", resp.Error.Message, resp.Error.Code)
 			return nil, fmt.Errorf("request failed: %s (code: %d)", resp.Error.Message, resp.Error.Code)
 		}
 		return resp.Result, nil
@@ -530,7 +530,7 @@ func (conn *LSPConnection) RegisterServerRequestHandler(method string, handler S
 
 // Close closes the connection
 func (conn *LSPConnection) Close() error {
-	log.Printf("[LSP-IO] Closing LSPConnection...")
+	logger.Infof("[LSP-IO] Closing LSPConnection...")
 	// Close all pending handlers
 	conn.handlersMu.Lock()
 	for _, ch := range conn.handlers {
@@ -542,36 +542,36 @@ func (conn *LSPConnection) Close() error {
 	// Close streams
 	var errs []error
 	if conn.stdin != nil {
-		log.Printf("[LSP-IO] Closing stdin...")
+		logger.Infof("[LSP-IO] Closing stdin...")
 		if err := conn.stdin.Close(); err != nil {
-			log.Printf("[LSP-IO] Close stdin error: %v", err)
+			logger.Infof("[LSP-IO] Close stdin error: %v", err)
 			errs = append(errs, err)
 		}
 	}
 	if conn.stderr != nil {
-		log.Printf("[LSP-IO] Closing stderr...")
+		logger.Infof("[LSP-IO] Closing stderr...")
 		if err := conn.stderr.Close(); err != nil {
-			log.Printf("[LSP-IO] Close stderr error: %v", err)
+			logger.Infof("[LSP-IO] Close stderr error: %v", err)
 			errs = append(errs, err)
 		}
 	}
 
 	// Wait for process to exit
 	if conn.cmd != nil {
-		log.Printf("[LSP-IO] Waiting for process to exit...")
+		logger.Infof("[LSP-IO] Waiting for process to exit...")
 		if err := conn.cmd.Wait(); err != nil {
-			log.Printf("[LSP-IO] cmd.Wait error: %v", err)
+			logger.Infof("[LSP-IO] cmd.Wait error: %v", err)
 			errs = append(errs, err)
 		}
 		if conn.cmd.ProcessState != nil {
-			log.Printf("[LSP-IO] ProcessState: %v", conn.cmd.ProcessState)
+			logger.Infof("[LSP-IO] ProcessState: %v", conn.cmd.ProcessState)
 		}
 	}
 
 	if len(errs) > 0 {
 		return errs[0]
 	}
-	log.Printf("[LSP-IO] LSPConnection closed.")
+	logger.Infof("[LSP-IO] LSPConnection closed.")
 	return nil
 }
 
@@ -668,7 +668,7 @@ func (c *Client) createSession(sessionKey types.SessionKey) (*types.LSPSession, 
 		return nil, fmt.Errorf("unsupported language: %s", sessionKey.LanguageID)
 	}
 
-	log.Printf("[DEBUG] starting LSP server: command=%s, args=%v", serverConfig.Command, serverConfig.Args)
+	logger.Debugf("[DEBUG] starting LSP server: command=%s, args=%v", serverConfig.Command, serverConfig.Args)
 
 	// Start LSP server process
 	cmdArgs := serverConfig.Args
@@ -762,23 +762,23 @@ func (c *Client) initializeSession(session *types.LSPSession, serverConfig *conf
 
 	// Log initialize params
 	initParamsJson, _ := json.MarshalIndent(initParams, "", "  ")
-	log.Printf("[DEBUG] initialize params: %s", string(initParamsJson))
+	logger.Debugf("[DEBUG] initialize params: %s", string(initParamsJson))
 
 	// Save initialize params
 	session.InitializeParams = initParams
 
 	// Add debug logs
-	log.Printf("[DEBUG] starting LSP session initialization: language=%s, root=%s", session.Key.LanguageID, session.Key.RootURI)
+	logger.Debugf("[DEBUG] starting LSP session initialization: language=%s, root=%s", session.Key.LanguageID, session.Key.RootURI)
 
 	// Send initialize request - timeout 60s because some LSP servers start slowly
 	ctx, cancel := context.WithTimeout(c.ctx, 60*time.Second)
 	defer cancel()
 
-	log.Printf("[DEBUG] sending initialize request...")
+	logger.Debugf("[DEBUG] sending initialize request...")
 	conn := session.Conn.(*LSPConnection)
 	result, err := conn.Call(ctx, "initialize", initParams)
 	if err != nil {
-		log.Printf("[ERROR] failed to send initialize request: %v", err)
+		logger.Errorf("[ERROR] failed to send initialize request: %v", err)
 		return fmt.Errorf("failed to send initialize request: %w", err)
 	}
 
@@ -792,23 +792,23 @@ func (c *Client) initializeSession(session *types.LSPSession, serverConfig *conf
 	}
 
 	if err := json.Unmarshal(result, &initResult); err != nil {
-		log.Printf("[ERROR] failed to parse initialize result: %v", err)
+		logger.Errorf("[ERROR] failed to parse initialize result: %v", err)
 		// Continue even if parsing fails; some servers return non-standard format
 	} else {
-		log.Printf("[DEBUG] server info: %s %s", initResult.ServerInfo.Name, initResult.ServerInfo.Version)
+		logger.Debugf("[DEBUG] server info: %s %s", initResult.ServerInfo.Name, initResult.ServerInfo.Version)
 	}
 
-	log.Printf("[DEBUG] initialize request succeeded, response: %s", string(result))
-	log.Printf("[DEBUG] sending initialized notification...")
+	logger.Debugf("[DEBUG] initialize request succeeded, response: %s", string(result))
+	logger.Debugf("[DEBUG] sending initialized notification...")
 
 	// Send initialized notification
 	err = conn.Notify(ctx, "initialized", map[string]interface{}{})
 	if err != nil {
-		log.Printf("[ERROR] failed to send initialized notification: %v", err)
+		logger.Errorf("[ERROR] failed to send initialized notification: %v", err)
 		return fmt.Errorf("failed to send initialized notification: %w", err)
 	}
 
-	log.Printf("[DEBUG] LSP session initialization complete")
+	logger.Debugf("[DEBUG] LSP session initialization complete")
 	session.IsInitialized = true
 	return nil
 }
@@ -933,7 +933,7 @@ func (c *Client) FindDefinition(ctx context.Context, req *types.FindDefinitionRe
 
 	// Log definition request params
 	paramsJson, _ := json.MarshalIndent(params, "", "  ")
-	log.Printf("[DEBUG] definition request params: %s", string(paramsJson))
+	logger.Debugf("[DEBUG] definition request params: %s", string(paramsJson))
 
 	// Set timeout to 30s because gopls may need more time
 	requestCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -1647,16 +1647,16 @@ func (c *Client) ensureFileOpen(ctx context.Context, conn *LSPConnection, fileUR
 	}
 
 	didOpenParamsJson, _ := json.MarshalIndent(didOpenParams, "", "  ")
-	log.Printf("[DEBUG] didOpen params: %s", string(didOpenParamsJson))
+	logger.Debugf("[DEBUG] didOpen params: %s", string(didOpenParamsJson))
 
-	log.Printf("[DEBUG] sending didOpen notification: %s", fileURI)
+	logger.Debugf("[DEBUG] sending didOpen notification: %s", fileURI)
 	err = conn.Notify(ctx, "textDocument/didOpen", didOpenParams)
 	if err != nil {
 		return fmt.Errorf("failed to send didOpen notification: %w", err)
 	}
 
 	c.openedFiles[sessionKey][fileURI] = true
-	log.Printf("[DEBUG] file marked as open: %s", fileURI)
+	logger.Debugf("[DEBUG] file marked as open: %s", fileURI)
 
 	time.Sleep(1 * time.Second)
 

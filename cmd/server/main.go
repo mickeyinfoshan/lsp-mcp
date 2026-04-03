@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/mickeyinfoshan/lsp-mcp/internal/config"
+	"github.com/mickeyinfoshan/lsp-mcp/internal/logger"
 	"github.com/mickeyinfoshan/lsp-mcp/internal/mcp"
 )
 
@@ -178,6 +179,8 @@ func setupLogging(loggingConfig *config.LoggingConfig) {
 		log.SetOutput(logFile)
 		log.Printf("Log output set to file: %s", loggingConfig.FilePath)
 	}
+
+	logger.SetLevel(loggingConfig.Level)
 }
 
 // getSupportedLanguages gets the list of supported languages
